@@ -1,4 +1,5 @@
 pub mod exercise;
+pub mod format_output;
 pub mod hints;
 pub mod lock;
 pub mod player;
@@ -12,6 +13,7 @@ pub mod ui;
 pub mod watch;
 
 pub use exercise::{find_by_skeleton_path, Exercise, EXERCISES};
+pub use format_output::filter_test_output;
 pub use hints::HintTracker;
 pub use lock::{acquire_watch_lock, LockError, WatchLock};
 pub use player::{Frame, TracePlayer};

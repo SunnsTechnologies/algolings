@@ -1,8 +1,9 @@
 use algolings_cli::{
-    acquire_watch_lock, has_shown_welcome, mark_welcome_shown, render_plain, run_interactive,
-    run_multi_exercise_loop, run_trace, running_indicator, welcome_screen, HintTracker,
-    LockError, MultiExerciseState, StepOutcome, TraceError, EXERCISES,
+    acquire_watch_lock, filter_test_output, has_shown_welcome, mark_welcome_shown, render_plain,
+    run_interactive, run_multi_exercise_loop, run_trace, running_indicator, welcome_screen,
+    HintTracker, LockError, MultiExerciseState, StepOutcome, TraceError, EXERCISES,
 };
+use crossterm::style::Stylize;
 use std::io::IsTerminal;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -16,6 +17,7 @@ fn main() {
     // --plain: sequential-text fallback for screen readers/non-TTY use
     // (design review Accessibility pass). Also auto-selected when stdout
     // isn't a real terminal, since the ratatui TUI can't render there.
+    // Also means: no ANSI color, ever, in this mode.
     let plain_mode =
         std::env::args().any(|arg| arg == "--plain") || !std::io::stdout().is_terminal();
 
@@ -50,7 +52,7 @@ fn main() {
     // inside run_interactive; hints aren't latency-sensitive enough to be
     // worth the same complexity here).
     let hint_tracker = Arc::new(Mutex::new(HintTracker::new()));
-    spawn_hint_listener(hint_tracker.clone());
+    spawn_hint_listener(hint_tracker.clone(), plain_mode);
 
     let mut state = MultiExerciseState::new(EXERCISES);
 
@@ -66,9 +68,12 @@ fn main() {
         |step| match step {
             StepOutcome::ExerciseFailed { exercise, outcome } => {
                 hint_tracker.lock().unwrap().set_current_exercise(exercise);
-                println!("{} — FAILED", exercise.name);
-                println!("{}", outcome.output);
-                println!("[h] show hint (type h and press enter)");
+                let current_file = file_name(exercise.skeleton_path);
+                let cleaned = filter_test_output(&outcome.output, current_file);
+
+                print_status_line(plain_mode, exercise.name, false);
+                println!("{cleaned}");
+                print_hint_prompt(plain_mode);
             }
             StepOutcome::ExercisePassed { exercise, .. } => {
                 hint_tracker.lock().unwrap().clear();
@@ -104,16 +109,18 @@ fn main() {
                     }
                 }
 
-                println!("{} — PASSED", exercise.name);
-                println!("{}", exercise.concept_note);
+                print_status_line(plain_mode, exercise.name, true);
+                print_concept_note(plain_mode, exercise.concept_note);
             }
         },
         || {
             hint_tracker.lock().unwrap().clear();
-            println!(
-                "All {} sorting exercises complete! Nice work.",
-                EXERCISES.len()
-            );
+            let message = format!("All {} sorting exercises complete! Nice work.", EXERCISES.len());
+            if plain_mode {
+                println!("\n{message}");
+            } else {
+                println!("\n{}", message.green().bold());
+            }
         },
     );
 
@@ -123,7 +130,57 @@ fn main() {
     }
 }
 
-fn spawn_hint_listener(hint_tracker: Arc<Mutex<HintTracker>>) {
+/// The bare file name (e.g. "bubble.rs") from a skeleton path like
+/// "exercises/sort/src/bubble.rs" — matches how it appears in cargo's
+/// diagnostic `--> path:line:col` lines, for `filter_test_output`.
+fn file_name(skeleton_path: &str) -> &str {
+    skeleton_path.rsplit('/').next().unwrap_or(skeleton_path)
+}
+
+fn print_status_line(plain_mode: bool, exercise_name: &str, passed: bool) {
+    let label = if passed { "PASSED" } else { "FAILED" };
+    let line = format!("{exercise_name} — {label}");
+    if plain_mode {
+        println!("\n{line}");
+    } else if passed {
+        println!("\n{}", line.green().bold());
+    } else {
+        println!("\n{}", line.red().bold());
+    }
+}
+
+fn print_hint_prompt(plain_mode: bool) {
+    if plain_mode {
+        println!("[h] show hint (type h and press enter)");
+    } else {
+        println!("{}", "[h] show hint".cyan().bold());
+    }
+}
+
+fn print_concept_note(plain_mode: bool, note: &str) {
+    if plain_mode {
+        println!("{note}");
+    } else {
+        println!("{} {note}", "lesson:".magenta().bold());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::file_name;
+
+    #[test]
+    fn extracts_the_bare_file_name_from_a_skeleton_path() {
+        assert_eq!(file_name("exercises/sort/src/bubble.rs"), "bubble.rs");
+    }
+
+    #[test]
+    fn returns_the_input_unchanged_if_there_is_no_slash() {
+        assert_eq!(file_name("bubble.rs"), "bubble.rs");
+    }
+}
+
+fn spawn_hint_listener(hint_tracker: Arc<Mutex<HintTracker>>, plain_mode: bool) {
     std::thread::spawn(move || {
         use std::io::BufRead;
         let stdin = std::io::stdin();
@@ -134,7 +191,13 @@ fn spawn_hint_listener(hint_tracker: Arc<Mutex<HintTracker>>) {
             }
             let mut tracker = hint_tracker.lock().unwrap();
             match tracker.next_hint() {
-                Some(hint) => println!("hint: {hint}"),
+                Some(hint) => {
+                    if plain_mode {
+                        println!("hint: {hint}");
+                    } else {
+                        println!("{} {hint}", "hint:".yellow().bold());
+                    }
+                }
                 None => println!(
                     "no more hints for this exercise (or nothing to hint about right now)"
                 ),
