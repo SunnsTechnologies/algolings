@@ -19,6 +19,13 @@ fn main() {
     enable();
     match name.as_str() {
         "bubble" => sort_solutions::bubble_sort(&mut arr),
+        "selection" => sort_solutions::selection_sort(&mut arr),
+        "insertion" => sort_solutions::insertion_sort(&mut arr),
+        "merge" => sort_solutions::merge_sort(&mut arr),
+        "quick" => sort_solutions::quick_sort(&mut arr),
+        "shell" => sort_solutions::shell_sort(&mut arr),
+        "counting" => sort_solutions::counting_sort(&mut arr),
+        "radix" => sort_solutions::radix_sort(&mut arr),
         other => {
             eprintln!("unknown exercise: {other}");
             std::process::exit(2);

@@ -1,14 +1,15 @@
 use algolings_cli::{
     acquire_watch_lock, has_shown_welcome, mark_welcome_shown, render_plain, run_interactive,
-    run_trace, run_watch_loop, running_indicator, welcome_screen, LockError, TraceError,
-    EXERCISES,
+    run_multi_exercise_loop, run_trace, running_indicator, welcome_screen, LockError,
+    MultiExerciseState, StepOutcome, TraceError, EXERCISES,
 };
 use std::io::IsTerminal;
-use std::path::Path;
 use std::time::Duration;
 
 const DEBOUNCE_PERIOD: Duration = Duration::from_millis(250);
 const TRACE_TIMEOUT: Duration = Duration::from_secs(5);
+const PACKAGE: &str = "exercises-sort";
+const WATCH_DIR: &str = "exercises/sort/src";
 
 fn main() {
     // --plain: sequential-text fallback for screen readers/non-TTY use
@@ -41,61 +42,65 @@ fn main() {
         }
     }
 
-    // Only bubble_sort is ported so far (design doc Next Steps step 2 scope
-    // is "validate end to end on ONE exercise"); step 4 registers the rest.
-    let exercise = &EXERCISES[0];
-    println!("watching {}", exercise.skeleton_path);
+    let mut state = MultiExerciseState::new(EXERCISES);
 
-    let result = run_watch_loop(
+    let result = run_multi_exercise_loop(
         &workspace_root,
-        Path::new(exercise.skeleton_path),
-        "exercises-sort",
-        exercise.test_filter,
+        &workspace_root.join(WATCH_DIR),
+        PACKAGE,
+        &mut state,
         DEBOUNCE_PERIOD,
         None,
+        |exercise| println!("watching {}", exercise.skeleton_path),
         || print!("{}", running_indicator()),
-        |outcome| {
-            if !outcome.passed {
+        |step| match step {
+            StepOutcome::ExerciseFailed { exercise, outcome } => {
                 println!("{} — FAILED", exercise.name);
                 println!("{}", outcome.output);
                 println!("[h] show hint");
-                return;
             }
-
-            match run_trace(
-                &workspace_root,
-                "exercises-sort",
-                exercise.test_filter,
-                exercise.fixture,
-                TRACE_TIMEOUT,
-            ) {
-                Ok(events) => {
-                    if plain_mode {
-                        println!("{}", render_plain(exercise.fixture, &events));
-                    } else if let Err(err) =
-                        run_interactive(exercise.fixture, events, exercise.name)
-                    {
-                        eprintln!("trace renderer error: {err}");
+            StepOutcome::ExercisePassed { exercise, .. } => {
+                match run_trace(
+                    &workspace_root,
+                    PACKAGE,
+                    exercise.test_filter,
+                    exercise.fixture,
+                    TRACE_TIMEOUT,
+                ) {
+                    Ok(events) => {
+                        if plain_mode {
+                            println!("{}", render_plain(exercise.fixture, &events));
+                        } else if let Err(err) =
+                            run_interactive(exercise.fixture, events, exercise.name)
+                        {
+                            eprintln!("trace renderer error: {err}");
+                        }
+                    }
+                    Err(TraceError::Panicked(msg)) => {
+                        println!(
+                            "note: the trace replay hit a problem after tests passed:\n{msg}"
+                        );
+                    }
+                    Err(TraceError::TimedOut) => {
+                        println!(
+                            "note: the trace replay timed out (possible infinite loop) — \
+                             tests still passed, so this is unexpected."
+                        );
+                    }
+                    Err(TraceError::Io(err)) => {
+                        eprintln!("trace replay error: {err}");
                     }
                 }
-                Err(TraceError::Panicked(msg)) => {
-                    println!(
-                        "note: the trace replay hit a problem after tests passed:\n{msg}"
-                    );
-                }
-                Err(TraceError::TimedOut) => {
-                    println!(
-                        "note: the trace replay timed out (possible infinite loop) — \
-                         tests still passed, so this is unexpected."
-                    );
-                }
-                Err(TraceError::Io(err)) => {
-                    eprintln!("trace replay error: {err}");
-                }
-            }
 
-            println!("{} — PASSED", exercise.name);
-            println!("{}", exercise.concept_note);
+                println!("{} — PASSED", exercise.name);
+                println!("{}", exercise.concept_note);
+            }
+        },
+        || {
+            println!(
+                "All {} sorting exercises complete! Nice work.",
+                EXERCISES.len()
+            );
         },
     );
 

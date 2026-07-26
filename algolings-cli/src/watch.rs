@@ -3,7 +3,8 @@
 //! actual `notify` filesystem events so the timing/coalescing logic is
 //! unit-testable without touching a real filesystem.
 
-use crate::test_runner::{run_package_tests, TestOutcome};
+use crate::progress::{MultiExerciseState, StepOutcome};
+use crate::test_runner::run_package_tests;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -76,30 +77,51 @@ pub fn watch_path(path: &Path) -> notify::Result<(RecommendedWatcher, Receiver<(
     Ok((watcher, rx))
 }
 
-/// The core `algolings watch` loop: watch `skeleton_path`, debounce saves,
-/// run `package`'s tests (filtered by `test_filter`) once settled, and
-/// report the outcome — discarding results superseded by a newer save
-/// before they complete.
+/// The core `algolings watch` loop: watches `watch_dir` (the directory
+/// holding all exercise skeletons), debounces saves, and on each settle
+/// checks the CURRENT exercise (per `state`, sequential progression —
+/// design decision from step 4) — reporting pass/fail and advancing state,
+/// with results superseded by a newer save discarded before they complete.
+///
+/// Before entering the loop, fast-forwards `state` past any exercises that
+/// already pass (e.g. a returning learner who solved some in a prior
+/// session), so the correct "current" exercise is known immediately.
 ///
 /// `max_iterations`: `None` runs forever (the real CLI); `Some(n)` stops
-/// after `n` settled runs (used by tests, which can't block forever).
+/// after `n` settled checks (used by tests, which can't block forever).
+///
+/// `on_current_exercise` fires with the exercise the learner is now on —
+/// once right after catch-up (when the module isn't already complete), and
+/// again every time progress advances to a new exercise. `on_all_complete`
+/// covers the "nothing left to announce" case instead.
 #[allow(clippy::too_many_arguments)]
-pub fn run_watch_loop(
+pub fn run_multi_exercise_loop(
     workspace_root: &Path,
-    skeleton_path: &Path,
+    watch_dir: &Path,
     package: &str,
-    test_filter: &str,
+    state: &mut MultiExerciseState,
     quiet_period: Duration,
     max_iterations: Option<u32>,
+    mut on_current_exercise: impl FnMut(&crate::exercise::Exercise),
     mut on_settled: impl FnMut(),
-    mut on_result: impl FnMut(&TestOutcome),
+    mut on_step: impl FnMut(StepOutcome),
+    mut on_all_complete: impl FnMut(),
 ) -> notify::Result<()> {
-    let absolute_path = if skeleton_path.is_absolute() {
-        skeleton_path.to_path_buf()
-    } else {
-        workspace_root.join(skeleton_path)
-    };
-    let (_watcher, rx) = watch_path(&absolute_path)?;
+    // Watch BEFORE the (potentially slow, subprocess-running) catch_up
+    // scan below, not after — otherwise a save landing during catch_up
+    // would happen before the watcher exists and be missed entirely,
+    // leaving the loop's first wait_for_quiet() blocked forever. Events
+    // that arrive during catch_up just sit in the channel and get drained
+    // by the first wait_for_quiet() call once the loop starts.
+    let (_watcher, rx) = watch_path(watch_dir)?;
+
+    state.catch_up(workspace_root, package).ok();
+    if state.is_complete() {
+        on_all_complete();
+        return Ok(());
+    }
+    on_current_exercise(state.current().expect("checked is_complete above"));
+
     let debouncer = Debouncer::new();
 
     let mut ran = 0;
@@ -108,11 +130,20 @@ pub fn run_watch_loop(
             break;
         }
         on_settled();
+        let Some(exercise) = state.current() else {
+            break;
+        };
         let token = debouncer.bump();
-        if let Ok(outcome) = run_package_tests(workspace_root, package, test_filter)
+        if let Ok(outcome) = run_package_tests(workspace_root, package, exercise.test_filter)
             && debouncer.is_current(token)
         {
-            on_result(&outcome);
+            let passed = outcome.passed;
+            on_step(state.check(outcome));
+            if state.is_complete() {
+                on_all_complete();
+            } else if passed {
+                on_current_exercise(state.current().expect("checked is_complete above"));
+            }
         }
         ran += 1;
         if max_iterations.is_some_and(|max| ran >= max) {
@@ -211,44 +242,85 @@ mod tests {
         assert!(result.is_ok(), "expected a filesystem event within 2s");
     }
 
-    #[test]
-    fn run_watch_loop_runs_tests_once_settled_and_reports_the_result() {
-        let dir = tempfile::tempdir().unwrap();
-        let file_path = dir.path().join("watched.rs");
-        std::fs::write(&file_path, "initial").unwrap();
-
-        let received = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
-        let received_clone = received.clone();
-
-        let workspace_root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    fn workspace_root() -> std::path::PathBuf {
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
-            .to_path_buf();
+            .to_path_buf()
+    }
 
-        let settled_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
-        let settled_count_clone = settled_count.clone();
+    #[test]
+    fn already_all_solved_completes_immediately_via_catch_up() {
+        // Points at sort-solutions, where every exercise already passes —
+        // proves catch_up() fast-forwards a returning learner straight to
+        // AllComplete without needing any file event at all.
+        let dir = tempfile::tempdir().unwrap();
+        let mut state = MultiExerciseState::new(crate::exercise::EXERCISES);
+        let completed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let completed_clone = completed.clone();
 
-        let watched_path = file_path.clone();
-        let handle = thread::spawn(move || {
-            run_watch_loop(
-                &workspace_root,
-                &watched_path,
+        run_multi_exercise_loop(
+            &workspace_root(),
+            dir.path(),
+            "sort-solutions",
+            &mut state,
+            Duration::from_millis(30),
+            Some(0),
+            |_| panic!("on_ready should not fire when already complete after catch_up"),
+            || {},
+            |_| panic!("should complete via catch_up before checking any step"),
+            move || completed_clone.store(true, std::sync::atomic::Ordering::SeqCst),
+        )
+        .unwrap();
+
+        assert!(completed.load(std::sync::atomic::Ordering::SeqCst));
+        assert!(state.is_complete());
+    }
+
+    #[test]
+    fn all_unsolved_stays_on_the_first_exercise_and_never_completes() {
+        // Points at exercises-sort, where every skeleton is still
+        // unsolved — proves the loop stays on exercise 0 and reports
+        // ExerciseFailed on each settle rather than silently advancing.
+        let dir = tempfile::tempdir().unwrap();
+        let watched_file = dir.path().join("watched.rs");
+        std::fs::write(&watched_file, "initial").unwrap();
+
+        let mut state = MultiExerciseState::new(crate::exercise::EXERCISES);
+        let failed_names = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let failed_names_clone = failed_names.clone();
+        let ready_name = std::sync::Arc::new(std::sync::Mutex::new(None));
+        let ready_name_clone = ready_name.clone();
+
+        let handle = std::thread::spawn(move || {
+            run_multi_exercise_loop(
+                &workspace_root(),
+                dir.path(),
                 "exercises-sort",
-                "bubble",
+                &mut state,
                 Duration::from_millis(30),
                 Some(1),
-                move || {
-                    settled_count_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                move |exercise| *ready_name_clone.lock().unwrap() = Some(exercise.name),
+                || {},
+                move |step| {
+                    if let StepOutcome::ExerciseFailed { exercise, .. } = step {
+                        failed_names_clone.lock().unwrap().push(exercise.name);
+                    } else {
+                        panic!("expected ExerciseFailed for an unsolved skeleton");
+                    }
                 },
-                |outcome| received_clone.lock().unwrap().push(outcome.passed),
+                || panic!("should not complete while every exercise is unsolved"),
             )
+            .unwrap();
+            assert!(!state.is_complete());
+            assert_eq!(state.current().map(|e| e.name), Some("bubble_sort"));
         });
 
         thread::sleep(Duration::from_millis(100));
-        std::fs::write(&file_path, "changed").unwrap();
+        std::fs::write(&watched_file, "changed").unwrap();
+        handle.join().unwrap();
 
-        handle.join().unwrap().unwrap();
-        assert_eq!(received.lock().unwrap().len(), 1);
-        assert_eq!(settled_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert_eq!(*failed_names.lock().unwrap(), vec!["bubble_sort"]);
+        assert_eq!(*ready_name.lock().unwrap(), Some("bubble_sort"));
     }
 }
