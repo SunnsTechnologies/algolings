@@ -15,7 +15,7 @@ pub fn welcome_screen(exercise_count: usize) -> String {
     };
     format!(
         "algolings — {exercise_count} sorting {noun}\n\
-         Solve exercises/sort/src/bubble.rs to start. Press [h] anytime for hints.\n"
+         Press [h] anytime for hints.\n"
     )
 }
 
@@ -50,6 +50,19 @@ mod tests {
         let screen = welcome_screen(1);
         assert!(screen.contains("1 sorting exercise\n") || screen.contains("1 sorting exercise "));
         assert!(!screen.contains("1 sorting exercises"));
+    }
+
+    #[test]
+    fn welcome_screen_does_not_hardcode_a_specific_exercise_file() {
+        // Regression test: the welcome text used to say "Solve
+        // exercises/sort/src/bubble.rs to start" unconditionally, which is
+        // wrong the moment bubble_sort is already solved (e.g. resuming
+        // progress, or catch-up landing on a later exercise). The
+        // "watching <path>" line that's printed right after this already
+        // names the real current exercise, so this text shouldn't repeat
+        // (and potentially contradict) that with a hardcoded guess.
+        let screen = welcome_screen(8);
+        assert!(!screen.contains("bubble.rs"));
     }
 
     #[test]
