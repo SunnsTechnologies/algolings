@@ -6,6 +6,12 @@ members = [
     "exercises/sort",
     "exercises/sort-solutions",
 ]
+# Without this, `cargo run` from the workspace root is ambiguous across the
+# 3 binary-producing packages (algolings, exercises-sort-trace,
+# sort-solutions-trace) and errors out. algolings-cli has exactly one bin,
+# so defaulting bare `cargo run`/`cargo build` to it makes the README's
+# quickstart (`cargo run`, no flags) actually work as written.
+default-members = ["algolings-cli"]
 
 [workspace.package]
 license = "MIT"

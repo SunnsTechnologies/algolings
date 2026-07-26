@@ -94,6 +94,14 @@ exercises/tests-shared/    one test suite per exercise, shared by both crates ab
 
 Found a bug, or want to help port the next module (searching, linked lists, stacks & queues, hash tables, recursion & backtracking, trees, graphs, dynamic programming)? Issues and PRs welcome.
 
+To verify the whole repo (not just the exercises you're working on), use:
+
+```sh
+cargo test --workspace --no-fail-fast
+```
+
+The plain `cargo test --workspace` isn't enough here: the exercise skeletons in `exercises/sort/` are *supposed* to fail (they start unsolved), and Cargo's default fail-fast behavior means it stops at that first failing package before ever reaching `exercises/sort-solutions/`'s tests. `--no-fail-fast` makes sure the reference solutions actually get checked.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
