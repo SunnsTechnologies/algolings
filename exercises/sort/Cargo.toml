@@ -3,5 +3,10 @@ name = "exercises-sort"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "exercises-sort-trace"
+path = "src/bin/trace.rs"
+
 [dependencies]
-algolings-trace = { path = "../../algolings-trace" }
+algolings-trace = { version = "0.1.0", path = "../../algolings-trace" }
+serde_json = "1.0.151"

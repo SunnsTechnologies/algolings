@@ -3,5 +3,10 @@ name = "sort-solutions"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "sort-solutions-trace"
+path = "src/bin/trace.rs"
+
 [dependencies]
 algolings-trace = { path = "../../algolings-trace" }
+serde_json = "1.0.151"

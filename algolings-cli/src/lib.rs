@@ -1,13 +1,20 @@
 pub mod exercise;
 pub mod lock;
-pub mod replay;
+pub mod player;
+pub mod render_plain;
+pub mod render_tui;
 pub mod test_runner;
+pub mod trace_frame;
+pub mod trace_runner;
 pub mod ui;
 pub mod watch;
 
 pub use exercise::{find_by_skeleton_path, Exercise, EXERCISES};
 pub use lock::{acquire_watch_lock, LockError, WatchLock};
-pub use replay::{replay, ReplayError};
+pub use player::{Frame, TracePlayer};
+pub use render_plain::render_plain;
+pub use render_tui::{draw_frame, run_interactive};
 pub use test_runner::{run_package_tests, TestOutcome};
+pub use trace_runner::{run_trace, run_with_timeout, TimeoutOrIo, TraceError};
 pub use ui::{has_shown_welcome, mark_welcome_shown, running_indicator, welcome_screen};
 pub use watch::{run_watch_loop, wait_for_quiet, watch_path, Debouncer};

@@ -10,9 +10,13 @@
 //! tracing the reference solution both fall out of the same mechanism, with
 //! no special-casing of which one "really" gets traced.
 
+use serde::{Deserialize, Serialize};
 use std::cell::{Cell, RefCell};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Serializable so the trace binary (a subprocess, run fresh against the
+/// current on-disk exercise code) can print the recorded trace as JSON for
+/// the algolings CLI's parent process to read back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Event {
     Compare { i: usize, j: usize },
     Swap { i: usize, j: usize },
