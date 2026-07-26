@@ -3,5 +3,13 @@ name = "algolings-cli"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "algolings"
+path = "src/main.rs"
+
 [dependencies]
 algolings-trace = { path = "../algolings-trace" }
+notify = "8.2.0"
+
+[dev-dependencies]
+tempfile = "3.27.0"
