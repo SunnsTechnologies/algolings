@@ -1,0 +1,132 @@
+//! Step-tracing primitives shared between exercise solutions and the
+//! algolings CLI's replay/trace renderer.
+//!
+//! Resolves the "whose code gets traced" question from the design review:
+//! exercise solutions call these helpers (`cmp_lt`, `swap`, `set_at`,
+//! `mark_sorted`) instead of raw `<` / `.swap()` / index assignment. The
+//! public function signature a learner writes stays fully idiomatic
+//! (`fn bubble_sort(arr: &mut [i32])`) — only the operations *inside* the
+//! body go through these helpers, so tracing a learner's own solution and
+//! tracing the reference solution both fall out of the same mechanism, with
+//! no special-casing of which one "really" gets traced.
+
+use std::cell::{Cell, RefCell};
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Event {
+    Compare { i: usize, j: usize },
+    Swap { i: usize, j: usize },
+    Set { i: usize, value: i64 },
+    MarkSorted { i: usize },
+}
+
+thread_local! {
+    static ENABLED: Cell<bool> = const { Cell::new(false) };
+    static EVENTS: RefCell<Vec<Event>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Enables tracing on the current thread and clears any prior events.
+pub fn enable() {
+    ENABLED.with(|e| e.set(true));
+    EVENTS.with(|events| events.borrow_mut().clear());
+}
+
+/// Disables tracing on the current thread. Normal `cargo test` runs never
+/// call this because they never call `enable()` in the first place —
+/// tracing defaults to off.
+pub fn disable() {
+    ENABLED.with(|e| e.set(false));
+}
+
+pub fn is_enabled() -> bool {
+    ENABLED.with(|e| e.get())
+}
+
+/// Drains and returns all events recorded since the last `enable()` or
+/// `take_events()` call.
+pub fn take_events() -> Vec<Event> {
+    EVENTS.with(|events| std::mem::take(&mut *events.borrow_mut()))
+}
+
+fn record(event: Event) {
+    if is_enabled() {
+        EVENTS.with(|events| events.borrow_mut().push(event));
+    }
+}
+
+/// Compares `arr[i] < arr[j]`, recording a `Compare` event when tracing is
+/// enabled. A no-op (beyond the enabled check) when tracing is disabled.
+///
+/// Use this for algorithms that compare two *live* positions in the array
+/// being sorted (bubble/selection/insertion sort). For algorithms that
+/// compare values held in a temporary buffer while still wanting to report
+/// the values' *original* global positions (merge sort's snapshot-based
+/// merge step), use [`cmp_lt_values`] instead — it decouples "what data gets
+/// compared" from "what index gets reported".
+pub fn cmp_lt<T: PartialOrd>(arr: &[T], i: usize, j: usize) -> bool {
+    record(Event::Compare { i, j });
+    arr[i] < arr[j]
+}
+
+/// Compares two arbitrary values directly, recording a `Compare` event with
+/// caller-supplied `report_i`/`report_j` indices rather than indexing into a
+/// slice. Needed whenever the values being compared don't live at those
+/// indices in any single slice right now (e.g. a merge-sort snapshot buffer)
+/// but the trace should still report the algorithm's true global positions.
+pub fn cmp_lt_values<T: PartialOrd>(a: &T, b: &T, report_i: usize, report_j: usize) -> bool {
+    record(Event::Compare { i: report_i, j: report_j });
+    a < b
+}
+
+/// Swaps `arr[i]` and `arr[j]`, recording a `Swap` event when tracing is
+/// enabled.
+pub fn swap<T>(arr: &mut [T], i: usize, j: usize) {
+    record(Event::Swap { i, j });
+    arr.swap(i, j);
+}
+
+/// Writes `value` into `out[i]`, recording a `Set` event. Used by algorithms
+/// (e.g. counting sort, merge sort's write-back) that write into a buffer
+/// rather than swapping two live positions.
+pub fn set_at<T>(out: &mut [T], i: usize, value: T)
+where
+    T: Copy + Into<i64>,
+{
+    record(Event::Set { i, value: value.into() });
+    out[i] = value;
+}
+
+/// Records that position `i` is now in its final sorted place.
+pub fn mark_sorted(i: usize) {
+    record(Event::MarkSorted { i });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn disabled_by_default_and_records_nothing() {
+        disable();
+        let arr = [3, 1, 2];
+        let _ = cmp_lt(&arr, 0, 1);
+        assert!(take_events().is_empty());
+    }
+
+    #[test]
+    fn enabled_records_compare_and_swap() {
+        enable();
+        let mut arr = [3, 1];
+        assert!(!cmp_lt(&arr, 0, 1));
+        swap(&mut arr, 0, 1);
+        let events = take_events();
+        assert_eq!(
+            events,
+            vec![
+                Event::Compare { i: 0, j: 1 },
+                Event::Swap { i: 0, j: 1 },
+            ]
+        );
+        disable();
+    }
+}
