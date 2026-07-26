@@ -3,7 +3,7 @@
 //! transition.
 
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 pub struct TestOutcome {
     pub passed: bool,
@@ -22,6 +22,11 @@ pub fn run_package_tests(
     let output = Command::new("cargo")
         .args(["test", "-p", package, "--lib", filter])
         .current_dir(workspace_root)
+        // This subprocess never reads input. Explicitly null stdin rather
+        // than rely on Command::output()'s default — the CLI's hint
+        // listener reads real stdin on a background thread, and an
+        // inherited stdin here could contend with it for keystrokes.
+        .stdin(Stdio::null())
         .output()?;
 
     let mut combined = String::from_utf8_lossy(&output.stdout).into_owned();

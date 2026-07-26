@@ -6,3 +6,6 @@ members = [
     "exercises/sort",
     "exercises/sort-solutions",
 ]
+
+[workspace.package]
+license = "MIT"

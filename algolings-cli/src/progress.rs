@@ -88,6 +88,7 @@ mod tests {
             skeleton_path: "one.rs",
             fixture: &[1],
             concept_note: "n/a",
+            hints: &["hint"],
         },
         Exercise {
             name: "two",
@@ -95,6 +96,7 @@ mod tests {
             skeleton_path: "two.rs",
             fixture: &[2],
             concept_note: "n/a",
+            hints: &["hint"],
         },
     ];
 

@@ -1,9 +1,10 @@
 use algolings_cli::{
     acquire_watch_lock, has_shown_welcome, mark_welcome_shown, render_plain, run_interactive,
-    run_multi_exercise_loop, run_trace, running_indicator, welcome_screen, LockError,
-    MultiExerciseState, StepOutcome, TraceError, EXERCISES,
+    run_multi_exercise_loop, run_trace, running_indicator, welcome_screen, HintTracker,
+    LockError, MultiExerciseState, StepOutcome, TraceError, EXERCISES,
 };
 use std::io::IsTerminal;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 const DEBOUNCE_PERIOD: Duration = Duration::from_millis(250);
@@ -42,6 +43,15 @@ fn main() {
         }
     }
 
+    // Hints are requested by typing "h" + Enter, read on a background
+    // thread — not a raw single-keypress, which would require enabling
+    // terminal raw mode for the whole session (the trace view's step/
+    // auto-play controls need that, but they're already self-contained
+    // inside run_interactive; hints aren't latency-sensitive enough to be
+    // worth the same complexity here).
+    let hint_tracker = Arc::new(Mutex::new(HintTracker::new()));
+    spawn_hint_listener(hint_tracker.clone());
+
     let mut state = MultiExerciseState::new(EXERCISES);
 
     let result = run_multi_exercise_loop(
@@ -55,11 +65,13 @@ fn main() {
         || print!("{}", running_indicator()),
         |step| match step {
             StepOutcome::ExerciseFailed { exercise, outcome } => {
+                hint_tracker.lock().unwrap().set_current_exercise(exercise);
                 println!("{} — FAILED", exercise.name);
                 println!("{}", outcome.output);
-                println!("[h] show hint");
+                println!("[h] show hint (type h and press enter)");
             }
             StepOutcome::ExercisePassed { exercise, .. } => {
+                hint_tracker.lock().unwrap().clear();
                 match run_trace(
                     &workspace_root,
                     PACKAGE,
@@ -97,6 +109,7 @@ fn main() {
             }
         },
         || {
+            hint_tracker.lock().unwrap().clear();
             println!(
                 "All {} sorting exercises complete! Nice work.",
                 EXERCISES.len()
@@ -108,4 +121,24 @@ fn main() {
         eprintln!("watch error: {err}");
         std::process::exit(1);
     }
+}
+
+fn spawn_hint_listener(hint_tracker: Arc<Mutex<HintTracker>>) {
+    std::thread::spawn(move || {
+        use std::io::BufRead;
+        let stdin = std::io::stdin();
+        for line in stdin.lock().lines() {
+            let Ok(line) = line else { break };
+            if line.trim() != "h" {
+                continue;
+            }
+            let mut tracker = hint_tracker.lock().unwrap();
+            match tracker.next_hint() {
+                Some(hint) => println!("hint: {hint}"),
+                None => println!(
+                    "no more hints for this exercise (or nothing to hint about right now)"
+                ),
+            }
+        }
+    });
 }

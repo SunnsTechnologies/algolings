@@ -1,4 +1,5 @@
 pub mod exercise;
+pub mod hints;
 pub mod lock;
 pub mod player;
 pub mod progress;
@@ -11,6 +12,7 @@ pub mod ui;
 pub mod watch;
 
 pub use exercise::{find_by_skeleton_path, Exercise, EXERCISES};
+pub use hints::HintTracker;
 pub use lock::{acquire_watch_lock, LockError, WatchLock};
 pub use player::{Frame, TracePlayer};
 pub use progress::{MultiExerciseState, StepOutcome};

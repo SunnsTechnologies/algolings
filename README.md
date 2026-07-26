@@ -1,0 +1,99 @@
+# algolings
+
+**Learn algorithms by fixing them — in idiomatic Rust, with a live trace of your own solution.**
+
+algolings is [rustlings](https://github.com/rust-lang/rustlings) for algorithms. You clone the repo, run one command, and it watches your work: save a broken exercise and see why it fails, fix it and watch your own solution run as an animated trace in your terminal, then read a short note on the Rust idiom your solution just used.
+
+![algolings solving bubble_sort: a real save, a real test run, a real trace of the learner's own comparisons and swaps, then the concept note](demo.gif)
+
+*(shown in `--plain` mode for a reliable recording — the default mode renders the same trace as an animated terminal UI with step-through and auto-play controls.)*
+
+## Why
+
+Rustlings teaches Rust syntax through small exercises. LeetCode-style tools teach algorithm correctness. Neither teaches you *why* a correct Rust solution looks the way it does — why a sort takes `&mut [i32]` instead of `Vec<i32>`, why `isize` shows up where you'd expect `usize`, why one line copies a value before an array gets mutated out from under it.
+
+algolings sits at the intersection: real algorithms, idiomatic Rust, and a trace of *your own* comparisons and swaps — not a canned animation.
+
+## Quickstart
+
+```sh
+git clone https://github.com/SunnsTechnologies/algolings
+cd algolings
+cargo run
+```
+
+That's it. `algolings` starts watching `exercises/sort/src/`. Open `exercises/sort/src/bubble.rs` in your editor, replace the `todo!()` with a real bubble sort, and save. algolings will:
+
+1. Run the exercise's tests.
+2. If they fail, show you why.
+3. If they pass, replay your solution as an animated trace and show a note on the Rust idiom it relies on.
+4. Move you on to the next exercise.
+
+Prefer plain sequential text instead of the animated terminal view (useful for screen readers, CI, or piping output)?
+
+```sh
+cargo run -- --plain
+```
+
+## What you'll learn
+
+Eight sorting algorithms, in the order you solve them:
+
+| # | Exercise | Idiom you'll hit |
+|---|----------|-------------------|
+| 1 | Bubble sort | Why a step-tracing helper function is just a normal call, not magic |
+| 2 | Selection sort | Tracking an index instead of a value |
+| 3 | Insertion sort | Copying a value out before the array mutates under it |
+| 4 | Merge sort | Recursing on index ranges instead of `split_at_mut` sub-slices |
+| 5 | Quick sort | `isize` vs. `usize`, and why `-1` sometimes has to be a valid bound |
+| 6 | Shell sort | Guarding unsigned subtraction against underflow |
+| 7 | Counting sort | An algorithm with zero comparisons |
+| 8 | Radix sort | Where the non-negative-integer assumption actually matters |
+
+Each exercise's full write-up (complexity analysis, walkthrough, alternative implementations) is also available at [learn.sunnstech.com](https://learn.sunnstech.com) if you want the deeper version.
+
+## While you're solving an exercise
+
+```
+[ 5 | 1* | 4* | 2 | 8 ]
+compare [1] and [0] -> [ 5* | 1* | 4 | 2 | 8 ]
+```
+
+**In the trace view** (after an exercise passes), single keypresses:
+- **space** step through one comparison/swap at a time
+- **a** toggle auto-play
+- **q** quit the trace and move on to the concept note
+
+**While an exercise is failing**, type a command and press enter:
+- **h** then enter — show the next hint. Hints escalate (a vague nudge, then more specific, then near the answer) and stay in order until you solve the exercise.
+
+Compared elements are marked with both color *and* a `*` glyph — never color alone, so the trace stays legible if you're colorblind or running `--plain`.
+
+## How it works
+
+algolings is a two-crate-per-exercise-set setup:
+
+- **`algolings-trace`** — the tracing primitives (`cmp_lt`, `cmp_lt_values`, `swap`, `set_at`, `mark_sorted`). Exercise solutions call these instead of raw `<` / `.swap()` — same behavior, but it lets algolings record which comparisons and swaps *your* solution actually made.
+- **`algolings-cli`** — the `algolings` binary: watches your exercise files, runs their tests, and renders the trace.
+- **`exercises/sort`** — the exercises you edit. Each one ships broken (`todo!()`).
+- **`exercises/sort-solutions`** — reference solutions, used by CI to prove every exercise is solvable, and as the source for hints and concept notes.
+
+When you save a file, algolings runs `cargo test` against it. If it passes, algolings runs a *separate* subprocess (`cargo run --bin <package>-trace`) with tracing enabled against your now-correct solution, and animates the result. Running the trace as its own subprocess — rather than linking your code into the long-running watch process — means it always reflects what you just saved, and a genuinely broken infinite loop can be killed outright instead of hanging the tool.
+
+## Project layout
+
+```
+algolings-trace/       tracing primitives shared by exercises and the CLI
+algolings-cli/          the algolings binary
+exercises/sort/         exercises you edit (start broken)
+exercises/sort-solutions/  reference solutions (used by CI + hints)
+exercises/tests-shared/    one test suite per exercise, shared by both crates above
+```
+
+## Contributing
+
+Found a bug, or want to help port the next module (searching, linked lists, stacks & queues, hash tables, recursion & backtracking, trees, graphs, dynamic programming)? Issues and PRs welcome.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

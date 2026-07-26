@@ -23,7 +23,13 @@ pub enum TimeoutOrIo {
 /// callers decide what a non-zero exit means for their use case.
 pub fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, TimeoutOrIo> {
     use std::process::Stdio;
-    command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    // Never inherit stdin: this subprocess doesn't read input, and an
+    // inherited stdin could contend with the CLI's hint listener (a
+    // background thread reading real stdin) for keystrokes.
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
 
     let mut child = command.spawn().map_err(|e| TimeoutOrIo::Io(e.to_string()))?;
     let start = Instant::now();
