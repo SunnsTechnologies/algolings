@@ -141,6 +141,7 @@ pub fn run_multi_exercise_loop(
             on_step(state.check(outcome));
             if state.is_complete() {
                 on_all_complete();
+                return Ok(());
             } else if passed {
                 on_current_exercise(state.current().expect("checked is_complete above"));
             }
@@ -322,5 +323,95 @@ mod tests {
 
         assert_eq!(*failed_names.lock().unwrap(), vec!["bubble_sort"]);
         assert_eq!(*ready_name.lock().unwrap(), Some("bubble_sort"));
+    }
+
+    /// A standalone throwaway crate whose single test reads its pass/fail
+    /// result from a `flag.txt` file at runtime — so two `cargo test`
+    /// invocations against the SAME compiled binary can observe different
+    /// outcomes without recompiling or touching any real project file.
+    fn build_flag_crate() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("Cargo.toml"),
+            "[package]\nname = \"flagpkg\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+        )
+        .unwrap();
+        std::fs::create_dir(dir.path().join("src")).unwrap();
+        std::fs::write(
+            dir.path().join("src/lib.rs"),
+            "#[cfg(test)]\nmod tests {\n    #[test]\n    fn flag_check() {\n        \
+             let flag_path = concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/flag.txt\");\n        \
+             let content = std::fs::read_to_string(flag_path).unwrap_or_default();\n        \
+             assert_eq!(content.trim(), \"pass\");\n    }\n}\n",
+        )
+        .unwrap();
+        std::fs::write(dir.path().join("flag.txt"), "fail").unwrap();
+        dir
+    }
+
+    #[test]
+    fn completing_the_last_exercise_via_a_live_save_returns_promptly() {
+        // Regression test for a real bug: on_all_complete() fired when
+        // completion happened INSIDE the loop (as opposed to via catch_up's
+        // pre-loop early return), but the function never returned — it fell
+        // through to the next wait_for_quiet() and blocked forever waiting
+        // for a second save that would never come.
+        let crate_dir = build_flag_crate();
+        let watch_dir = tempfile::tempdir().unwrap();
+        let watched_file = watch_dir.path().join("watched.rs");
+        std::fs::write(&watched_file, "initial").unwrap();
+
+        const FLAG_EXERCISE: &[crate::exercise::Exercise] = &[crate::exercise::Exercise {
+            name: "flag",
+            test_filter: "flag_check",
+            skeleton_path: "flag.txt",
+            fixture: &[1],
+            concept_note: "n/a",
+            hints: &["hint"],
+        }];
+        let mut state = MultiExerciseState::new(FLAG_EXERCISE);
+
+        let (done_tx, done_rx) = mpsc::channel();
+        let (ready_tx, ready_rx) = mpsc::channel();
+        let crate_root = crate_dir.path().to_path_buf();
+        let watch_path_buf = watch_dir.path().to_path_buf();
+
+        let handle = thread::spawn(move || {
+            run_multi_exercise_loop(
+                &crate_root,
+                &watch_path_buf,
+                "flagpkg",
+                &mut state,
+                Duration::from_millis(30),
+                None,
+                // Fires once catch_up() has run and confirmed the module
+                // is NOT yet complete — i.e. it genuinely observed "fail",
+                // not a race where the flag flipped mid-catch_up.
+                move |_| ready_tx.send(()).unwrap(),
+                || {},
+                |_| {},
+                || {},
+            )
+            .unwrap();
+            done_tx.send(()).unwrap();
+        });
+
+        // Wait for catch_up() to genuinely observe the flag failing before
+        // flipping it — otherwise a race could let catch_up see "pass" and
+        // complete via its own early-return path, which already works
+        // correctly and wouldn't exercise the buggy in-loop path at all.
+        ready_rx
+            .recv_timeout(Duration::from_secs(10))
+            .expect("catch_up should observe the failing flag and start watching");
+        std::fs::write(crate_dir.path().join("flag.txt"), "pass").unwrap();
+        std::fs::write(&watched_file, "changed").unwrap();
+
+        let result = done_rx.recv_timeout(Duration::from_secs(10));
+        assert!(
+            result.is_ok(),
+            "run_multi_exercise_loop did not return after completing inside the loop \
+             — it's stuck waiting for a second save that will never come"
+        );
+        handle.join().unwrap();
     }
 }
