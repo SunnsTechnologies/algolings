@@ -89,6 +89,7 @@ mod tests {
             fixture: &[1],
             concept_note: "n/a",
             hints: &["hint"],
+            target: None,
         },
         Exercise {
             name: "two",
@@ -97,6 +98,7 @@ mod tests {
             fixture: &[2],
             concept_note: "n/a",
             hints: &["hint"],
+            target: None,
         },
     ];
 

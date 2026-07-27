@@ -14,7 +14,7 @@ pub fn welcome_screen(exercise_count: usize) -> String {
         "exercises"
     };
     format!(
-        "algolings — {exercise_count} sorting {noun}\n\
+        "algolings — {exercise_count} algorithm {noun}\n\
          Press [h] anytime for hints.\n"
     )
 }
@@ -41,15 +41,26 @@ mod tests {
     #[test]
     fn welcome_screen_mentions_exercise_count_and_hint_key() {
         let screen = welcome_screen(8);
-        assert!(screen.contains("8 sorting exercises"));
+        assert!(screen.contains("8"));
+        assert!(screen.contains("exercises"));
         assert!(screen.contains("[h]"));
     }
 
     #[test]
     fn welcome_screen_uses_singular_exercise_for_a_count_of_one() {
         let screen = welcome_screen(1);
-        assert!(screen.contains("1 sorting exercise\n") || screen.contains("1 sorting exercise "));
-        assert!(!screen.contains("1 sorting exercises"));
+        assert!(screen.contains("1 ") && screen.contains("exercise\n"));
+        assert!(!screen.contains("exercises"));
+    }
+
+    #[test]
+    fn welcome_screen_does_not_hardcode_sorting_regression_guard() {
+        // Regression test: the welcome banner used to say "N sorting
+        // exercises" unconditionally, which became wrong the moment a
+        // second module (searching) exists — the count spans every
+        // module, not just sort's.
+        let screen = welcome_screen(10);
+        assert!(!screen.to_lowercase().contains("sorting"));
     }
 
     #[test]

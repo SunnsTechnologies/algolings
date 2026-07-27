@@ -83,30 +83,35 @@ pub enum TraceError {
 /// binary target (by convention) rather than all sharing a `trace` name,
 /// since cargo warns that colliding output filenames across packages may
 /// become a hard error.
+/// Builds the trailing `cargo run -- <these args>` arguments for the trace
+/// binary: exercise name, fixture JSON, and (only for search exercises) the
+/// target value. Sort exercises pass `target: None` and keep the exact
+/// 2-arg shape every existing trace binary already expects.
+fn build_trace_args(exercise_name: &str, fixture_json: &str, target: Option<i32>) -> Vec<String> {
+    let mut args = vec![exercise_name.to_string(), fixture_json.to_string()];
+    if let Some(t) = target {
+        args.push(t.to_string());
+    }
+    args
+}
+
 pub fn run_trace(
     workspace_root: &std::path::Path,
     package: &str,
     exercise_name: &str,
     fixture: &[i32],
+    target: Option<i32>,
     timeout: Duration,
 ) -> Result<Vec<algolings_trace::Event>, TraceError> {
     let fixture_json =
         serde_json::to_string(fixture).map_err(|e| TraceError::Io(e.to_string()))?;
     let bin_name = format!("{package}-trace");
+    let trace_args = build_trace_args(exercise_name, &fixture_json, target);
 
     let mut cmd = Command::new("cargo");
-    cmd.args([
-        "run",
-        "-q",
-        "-p",
-        package,
-        "--bin",
-        &bin_name,
-        "--",
-        exercise_name,
-        &fixture_json,
-    ])
-    .current_dir(workspace_root);
+    cmd.args(["run", "-q", "-p", package, "--bin", &bin_name, "--"])
+        .args(&trace_args)
+        .current_dir(workspace_root);
 
     let output = run_with_timeout(cmd, timeout).map_err(|e| match e {
         TimeoutOrIo::TimedOut => TraceError::TimedOut,
@@ -127,6 +132,22 @@ mod tests {
     use super::*;
     use std::process::Command;
     use std::time::{Duration, Instant};
+
+    #[test]
+    fn trace_args_omit_the_target_when_none() {
+        assert_eq!(
+            build_trace_args("bubble", "[5,1,4]", None),
+            vec!["bubble", "[5,1,4]"]
+        );
+    }
+
+    #[test]
+    fn trace_args_append_the_target_when_some() {
+        assert_eq!(
+            build_trace_args("linear", "[3,7,2,9,5]", Some(9)),
+            vec!["linear", "[3,7,2,9,5]", "9"]
+        );
+    }
 
     #[test]
     fn a_quick_command_completes_before_the_timeout() {
@@ -172,6 +193,7 @@ mod tests {
             "exercises-sort",
             "bubble",
             &[5, 1, 4, 2, 8],
+            None,
             Duration::from_secs(30),
         );
         match result {
@@ -189,6 +211,7 @@ mod tests {
             "sort-solutions",
             "bubble",
             &[5, 1, 4, 2, 8],
+            None,
             Duration::from_secs(30),
         );
         let events = result.expect("the reference solution should trace successfully");

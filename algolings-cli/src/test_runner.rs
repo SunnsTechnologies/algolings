@@ -91,15 +91,23 @@ mod tests {
     #[test]
     fn exercise_registry_module_name_actually_matches_its_test_filter() {
         // Regression test: this is the check that should have caught the
-        // bug above — that EXERCISES[0]'s test_filter field is something
-        // the shared test suite's module path actually contains.
-        let exercise = &crate::exercise::EXERCISES[0];
-        let outcome =
-            run_package_tests(&workspace_root(), "sort-solutions", exercise.test_filter).unwrap();
-        assert!(
-            outcome.passed,
-            "EXERCISES[0].test_filter ({:?}) matched zero tests against the reference solution",
-            exercise.test_filter
-        );
+        // bug above — that an exercise's test_filter field is something the
+        // shared test suite's module path actually contains. Checked per
+        // module (not just sort) so a search exercise with a typo'd filter
+        // wouldn't slip through undetected.
+        for module in crate::exercise::MODULES {
+            let exercise = &module.exercises[0];
+            let outcome = run_package_tests(
+                &workspace_root(),
+                module.solutions_package,
+                exercise.test_filter,
+            )
+            .unwrap();
+            assert!(
+                outcome.passed,
+                "{:?}'s test_filter ({:?}) matched zero tests against {:?}",
+                exercise.name, exercise.test_filter, module.solutions_package
+            );
+        }
     }
 }

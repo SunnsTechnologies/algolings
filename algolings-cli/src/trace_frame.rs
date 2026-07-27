@@ -18,6 +18,11 @@ pub fn apply_event(arr: &mut [i32], event: &Event) -> (Vec<usize>, String) {
             (vec![i], format!("set [{i}] = {value}"))
         }
         Event::MarkSorted { i } => (vec![], format!("[{i}] is now sorted")),
+        Event::Probe { i } => (vec![i], format!("check [{i}]")),
+        Event::Found { i } => (vec![i], format!("found [{i}]!")),
+        Event::NarrowRange { left, right } => {
+            (vec![], format!("search range is now [{left}, {right})"))
+        }
     }
 }
 
@@ -54,5 +59,32 @@ mod tests {
         let (highlighted, _) = apply_event(&mut arr, &Event::MarkSorted { i: 1 });
         assert_eq!(arr, vec![5, 1]);
         assert!(highlighted.is_empty());
+    }
+
+    #[test]
+    fn probe_highlights_the_checked_index_without_changing_values() {
+        let mut arr = vec![3, 7, 2, 9, 5];
+        let (highlighted, desc) = apply_event(&mut arr, &Event::Probe { i: 3 });
+        assert_eq!(arr, vec![3, 7, 2, 9, 5]);
+        assert_eq!(highlighted, vec![3]);
+        assert!(desc.contains("[3]"));
+    }
+
+    #[test]
+    fn found_highlights_the_matching_index_without_changing_values() {
+        let mut arr = vec![3, 7, 2, 9, 5];
+        let (highlighted, desc) = apply_event(&mut arr, &Event::Found { i: 3 });
+        assert_eq!(arr, vec![3, 7, 2, 9, 5]);
+        assert_eq!(highlighted, vec![3]);
+        assert!(desc.to_lowercase().contains("found"));
+    }
+
+    #[test]
+    fn narrow_range_highlights_nothing_and_changes_nothing() {
+        let mut arr = vec![3, 7, 2, 9, 5];
+        let (highlighted, desc) = apply_event(&mut arr, &Event::NarrowRange { left: 2, right: 5 });
+        assert_eq!(arr, vec![3, 7, 2, 9, 5]);
+        assert!(highlighted.is_empty());
+        assert!(desc.contains('2') && desc.contains('5'));
     }
 }

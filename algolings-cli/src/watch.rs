@@ -256,7 +256,7 @@ mod tests {
         // proves catch_up() fast-forwards a returning learner straight to
         // AllComplete without needing any file event at all.
         let dir = tempfile::tempdir().unwrap();
-        let mut state = MultiExerciseState::new(crate::exercise::EXERCISES);
+        let mut state = MultiExerciseState::new(crate::exercise::SORT_EXERCISES);
         let completed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let completed_clone = completed.clone();
 
@@ -287,7 +287,7 @@ mod tests {
         let watched_file = dir.path().join("watched.rs");
         std::fs::write(&watched_file, "initial").unwrap();
 
-        let mut state = MultiExerciseState::new(crate::exercise::EXERCISES);
+        let mut state = MultiExerciseState::new(crate::exercise::SORT_EXERCISES);
         let failed_names = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
         let failed_names_clone = failed_names.clone();
         let ready_name = std::sync::Arc::new(std::sync::Mutex::new(None));
@@ -368,6 +368,7 @@ mod tests {
             fixture: &[1],
             concept_note: "n/a",
             hints: &["hint"],
+            target: None,
         }];
         let mut state = MultiExerciseState::new(FLAG_EXERCISE);
 

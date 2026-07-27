@@ -27,9 +27,42 @@ pub struct Exercise {
     /// the design review's Pass 7 resolution. Requested one at a time via
     /// `[h]` while an exercise is failing.
     pub hints: &'static [&'static str],
+    /// The value being searched for, shown once to the learner before the
+    /// trace starts. `None` for sorting exercises, which don't search for
+    /// anything; `Some(n)` for search exercises.
+    pub target: Option<i32>,
 }
 
-pub const EXERCISES: &[Exercise] = &[
+/// One module of the curriculum: a package of skeleton exercises, its
+/// reference-solution package, the directory to watch, and the exercises
+/// themselves, in solving order. `run_module` (main.rs) runs one of these
+/// to completion before moving to the next.
+pub struct Module {
+    pub name: &'static str,
+    pub package: &'static str,
+    pub solutions_package: &'static str,
+    pub watch_dir: &'static str,
+    pub exercises: &'static [Exercise],
+}
+
+pub const MODULES: &[Module] = &[
+    Module {
+        name: "sorting",
+        package: "exercises-sort",
+        solutions_package: "sort-solutions",
+        watch_dir: "exercises/sort/src",
+        exercises: SORT_EXERCISES,
+    },
+    Module {
+        name: "searching",
+        package: "exercises-search",
+        solutions_package: "search-solutions",
+        watch_dir: "exercises/search/src",
+        exercises: SEARCH_EXERCISES,
+    },
+];
+
+pub const SORT_EXERCISES: &[Exercise] = &[
     Exercise {
         name: "bubble_sort",
         test_filter: "bubble",
@@ -45,6 +78,7 @@ pub const EXERCISES: &[Exercise] = &[
             "Use `cmp_lt(arr, i, i - 1)` to check order, `swap(arr, i - 1, i)` to fix it, \
              and `mark_sorted(n)` once a pass makes no swaps.",
         ],
+        target: None,
     },
     Exercise {
         name: "selection_sort",
@@ -62,6 +96,7 @@ pub const EXERCISES: &[Exercise] = &[
             "Use `cmp_lt(arr, j, min_index)` in your inner loop, then `swap(arr, i, \
              min_index)` only if `min_index != i`.",
         ],
+        target: None,
     },
     Exercise {
         name: "insertion_sort",
@@ -79,6 +114,7 @@ pub const EXERCISES: &[Exercise] = &[
             "Use `cmp_lt_values(&key, &arr[j - 1], i, j - 1)` to check whether to keep \
              shifting, and `set_at` for both the shift and the final placement.",
         ],
+        target: None,
     },
     Exercise {
         name: "merge_sort",
@@ -96,6 +132,7 @@ pub const EXERCISES: &[Exercise] = &[
             "In the merge step, snapshot the segment into a `Vec` first, then use \
              `cmp_lt_values` and `set_at` to write the merged result back into `arr`.",
         ],
+        target: None,
     },
     Exercise {
         name: "quick_sort",
@@ -113,6 +150,7 @@ pub const EXERCISES: &[Exercise] = &[
             "In `partition`, use `cmp_lt(arr, high, j)` negated to check `arr[j] <= \
              pivot`, and `swap` to move qualifying elements left.",
         ],
+        target: None,
     },
     Exercise {
         name: "shell_sort",
@@ -129,6 +167,7 @@ pub const EXERCISES: &[Exercise] = &[
             "Guard every `j - gap` with `j >= gap` first, to avoid a `usize` subtraction \
              underflow.",
         ],
+        target: None,
     },
     Exercise {
         name: "counting_sort",
@@ -147,6 +186,7 @@ pub const EXERCISES: &[Exercise] = &[
             "Use `set_at(&mut output, index, value)` to place each value at the index \
              given by its running count, then copy `output` back into `arr`.",
         ],
+        target: None,
     },
     Exercise {
         name: "radix_sort",
@@ -165,11 +205,61 @@ pub const EXERCISES: &[Exercise] = &[
             "Loop while `max_value / exp > 0`, and use `set_at` for every write into the \
              output buffer.",
         ],
+        target: None,
+    },
+];
+
+pub const SEARCH_EXERCISES: &[Exercise] = &[
+    Exercise {
+        name: "linear_search",
+        test_filter: "linear",
+        skeleton_path: "exercises/search/src/linear.rs",
+        fixture: &[3, 7, 2, 9, 5],
+        concept_note: "Why does this return `Option<usize>` instead of, say, -1 for \
+            \"not found\"? `usize` can't hold -1, and even if it could, a caller could \
+            forget to check for the sentinel and use it as a real index. `Option<usize>` \
+            makes \"maybe there's no answer\" part of the type — the compiler won't let \
+            you use the index without unwrapping it first.",
+        hints: &[
+            "Check each element in order until you find the target or reach the end.",
+            "Use `probe(arr, i, &target)` to check each index — it returns true on a \
+             match.",
+            "Call `found(i)` right before returning `Some(i)`, so the trace shows \
+             exactly where the search succeeded.",
+        ],
+        target: Some(9),
+    },
+    Exercise {
+        name: "binary_search",
+        test_filter: "binary",
+        skeleton_path: "exercises/search/src/binary.rs",
+        fixture: &[2, 5, 8, 12, 16, 23, 38, 56, 72, 91],
+        concept_note: "Why `left + (right - left) / 2` instead of `(left + right) / 2`? \
+            Both give the same midpoint mathematically, but `left + right` can overflow \
+            for large bounds even when the true midpoint is nowhere near overflowing — \
+            a classic bug real binary search implementations have shipped with. \
+            Subtracting first keeps the intermediate value bounded by the range itself.",
+        hints: &[
+            "The array is sorted — use that. Check the middle element and eliminate half \
+             the remaining range each time.",
+            "Track `left`/`right` bounds; narrow them based on whether the middle is too \
+             high or too low.",
+            "Use `probe(arr, mid, &target)` to check the middle, `narrow_range(left, \
+             right)` after adjusting the bounds, and `found(mid)` right before returning \
+             `Some(mid)`.",
+        ],
+        // 16, not 23, on purpose — it lands away from the first midpoint
+        // this implementation checks, so the trace actually shows a
+        // narrowing step or two instead of finding it on the first probe.
+        target: Some(16),
     },
 ];
 
 pub fn find_by_skeleton_path(path: &str) -> Option<&'static Exercise> {
-    EXERCISES.iter().find(|e| e.skeleton_path == path)
+    MODULES
+        .iter()
+        .flat_map(|m| m.exercises)
+        .find(|e| e.skeleton_path == path)
 }
 
 #[cfg(test)]
@@ -195,8 +285,16 @@ mod tests {
     }
 
     #[test]
+    fn find_by_skeleton_path_also_finds_a_search_exercise() {
+        // Regression test: find_by_skeleton_path used to search only the
+        // sort module's exercises.
+        let exercise = find_by_skeleton_path("exercises/search/src/linear.rs");
+        assert_eq!(exercise.map(|e| e.name), Some("linear_search"));
+    }
+
+    #[test]
     fn all_eight_curriculum_exercises_are_registered_in_order() {
-        let names: Vec<&str> = EXERCISES.iter().map(|e| e.name).collect();
+        let names: Vec<&str> = SORT_EXERCISES.iter().map(|e| e.name).collect();
         assert_eq!(
             names,
             vec![
@@ -212,11 +310,15 @@ mod tests {
         );
     }
 
+    fn all_exercises() -> impl Iterator<Item = &'static Exercise> {
+        MODULES.iter().flat_map(|m| m.exercises)
+    }
+
     #[test]
     fn every_exercise_fixture_is_within_the_legibility_cap() {
         // Design review: fixtures capped at <=20 elements so the terminal
         // trace stays legible.
-        for exercise in EXERCISES {
+        for exercise in all_exercises() {
             assert!(
                 exercise.fixture.len() <= 20,
                 "{} fixture has {} elements, exceeds the 20-element cap",
@@ -227,20 +329,30 @@ mod tests {
     }
 
     #[test]
-    fn every_exercise_test_filter_is_distinct() {
+    fn every_exercise_test_filter_is_distinct_within_its_module() {
         // Guards against the exact bug class the eng review found: two
         // exercises accidentally sharing a filter would mean one of them
-        // silently tests the wrong module.
-        let mut filters: Vec<&str> = EXERCISES.iter().map(|e| e.test_filter).collect();
-        let original_len = filters.len();
-        filters.sort_unstable();
-        filters.dedup();
-        assert_eq!(filters.len(), original_len, "duplicate test_filter found");
+        // silently tests the wrong module. Scoped per-module (not globally)
+        // since `cargo test -p` only ever runs one package's tests at a
+        // time — two DIFFERENT modules coincidentally sharing a filter
+        // string would be harmless.
+        for module in MODULES {
+            let mut filters: Vec<&str> = module.exercises.iter().map(|e| e.test_filter).collect();
+            let original_len = filters.len();
+            filters.sort_unstable();
+            filters.dedup();
+            assert_eq!(
+                filters.len(),
+                original_len,
+                "duplicate test_filter found in module {:?}",
+                module.name
+            );
+        }
     }
 
     #[test]
     fn every_exercise_has_at_least_two_staged_hints() {
-        for exercise in EXERCISES {
+        for exercise in all_exercises() {
             assert!(
                 exercise.hints.len() >= 2,
                 "{} has only {} hint(s), expected an escalating staged set",
@@ -250,6 +362,45 @@ mod tests {
             for hint in exercise.hints {
                 assert!(!hint.is_empty());
             }
+        }
+    }
+
+    #[test]
+    fn binary_search_fixture_is_sorted() {
+        // binary_search only works correctly on sorted input — an
+        // accidentally-unsorted fixture would make the reference solution's
+        // own trace look buggy even though the algorithm is correct.
+        let exercise = all_exercises()
+            .find(|e| e.name == "binary_search")
+            .expect("binary_search should be registered");
+        let mut sorted = exercise.fixture.to_vec();
+        sorted.sort_unstable();
+        assert_eq!(
+            exercise.fixture,
+            sorted.as_slice(),
+            "binary_search's fixture must be sorted"
+        );
+    }
+
+    #[test]
+    fn every_search_exercise_has_a_target() {
+        for exercise in SEARCH_EXERCISES {
+            assert!(
+                exercise.target.is_some(),
+                "{} is a search exercise but has no target",
+                exercise.name
+            );
+        }
+    }
+
+    #[test]
+    fn every_sort_exercise_has_no_target() {
+        for exercise in SORT_EXERCISES {
+            assert!(
+                exercise.target.is_none(),
+                "{} is a sort exercise but has a target",
+                exercise.name
+            );
         }
     }
 }

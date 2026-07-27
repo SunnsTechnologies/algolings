@@ -5,10 +5,13 @@ members = [
     "algolings-cli",
     "exercises/sort",
     "exercises/sort-solutions",
+    "exercises/search",
+    "exercises/search-solutions",
 ]
 # Without this, `cargo run` from the workspace root is ambiguous across the
-# 3 binary-producing packages (algolings, exercises-sort-trace,
-# sort-solutions-trace) and errors out. algolings-cli has exactly one bin,
+# binary-producing packages (algolings, exercises-sort-trace,
+# sort-solutions-trace, exercises-search-trace, search-solutions-trace) and
+# errors out. algolings-cli has exactly one bin,
 # so defaulting bare `cargo run`/`cargo build` to it makes the README's
 # quickstart (`cargo run`, no flags) actually work as written.
 default-members = ["algolings-cli"]

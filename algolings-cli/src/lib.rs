@@ -12,7 +12,7 @@ pub mod trace_runner;
 pub mod ui;
 pub mod watch;
 
-pub use exercise::{find_by_skeleton_path, Exercise, EXERCISES};
+pub use exercise::{find_by_skeleton_path, Exercise, Module, MODULES};
 pub use format_output::filter_test_output;
 pub use hints::HintTracker;
 pub use lock::{acquire_watch_lock, LockError, WatchLock};

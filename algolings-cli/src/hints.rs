@@ -61,6 +61,7 @@ mod tests {
         fixture: &[1],
         concept_note: "n/a",
         hints: &["a-hint-1", "a-hint-2"],
+        target: None,
     };
 
     const EX_B: Exercise = Exercise {
@@ -70,6 +71,7 @@ mod tests {
         fixture: &[1],
         concept_note: "n/a",
         hints: &["b-hint-1"],
+        target: None,
     };
 
     #[test]

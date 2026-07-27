@@ -1,17 +1,16 @@
 use algolings_cli::{
     acquire_watch_lock, filter_test_output, has_shown_welcome, mark_welcome_shown, render_plain,
     run_interactive, run_multi_exercise_loop, run_trace, running_indicator, welcome_screen,
-    HintTracker, LockError, MultiExerciseState, StepOutcome, TraceError, EXERCISES,
+    HintTracker, LockError, Module, MultiExerciseState, StepOutcome, TraceError, MODULES,
 };
 use crossterm::style::Stylize;
 use std::io::IsTerminal;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 const DEBOUNCE_PERIOD: Duration = Duration::from_millis(250);
 const TRACE_TIMEOUT: Duration = Duration::from_secs(5);
-const PACKAGE: &str = "exercises-sort";
-const WATCH_DIR: &str = "exercises/sort/src";
 
 fn main() {
     // --plain: sequential-text fallback for screen readers/non-TTY use
@@ -39,7 +38,8 @@ fn main() {
     };
 
     if !has_shown_welcome(&workspace_root) {
-        print!("{}", welcome_screen(EXERCISES.len()));
+        let total_exercises: usize = MODULES.iter().map(|m| m.exercises.len()).sum();
+        print!("{}", welcome_screen(total_exercises));
         if let Err(err) = mark_welcome_shown(&workspace_root) {
             eprintln!("note: could not persist first-run marker: {err}");
         }
@@ -54,20 +54,51 @@ fn main() {
     let hint_tracker = Arc::new(Mutex::new(HintTracker::new()));
     spawn_hint_listener(hint_tracker.clone(), plain_mode);
 
-    let mut state = MultiExerciseState::new(EXERCISES);
+    for (i, module) in MODULES.iter().enumerate() {
+        let next_module_name = MODULES.get(i + 1).map(|m| m.name);
+        let result = run_module(
+            &workspace_root,
+            module,
+            hint_tracker.clone(),
+            plain_mode,
+            next_module_name,
+        );
+        if let Err(err) = result {
+            eprintln!("watch error: {err}");
+            std::process::exit(1);
+        }
+    }
+}
 
-    let result = run_multi_exercise_loop(
-        &workspace_root,
-        &workspace_root.join(WATCH_DIR),
-        PACKAGE,
+/// Runs one module (e.g. sorting, searching) to completion: watches its
+/// directory, runs its package's tests on every save, replays a passing
+/// exercise's trace, and reports pass/fail — generalizing what used to be
+/// main()'s only body, back when there was only ever one module.
+fn run_module(
+    workspace_root: &Path,
+    module: &'static Module,
+    hint_tracker: Arc<Mutex<HintTracker>>,
+    plain_mode: bool,
+    next_module_name: Option<&'static str>,
+) -> notify::Result<()> {
+    let mut state = MultiExerciseState::new(module.exercises);
+    let hint_tracker_step = hint_tracker.clone();
+
+    run_multi_exercise_loop(
+        workspace_root,
+        &workspace_root.join(module.watch_dir),
+        module.package,
         &mut state,
         DEBOUNCE_PERIOD,
         None,
         |exercise| println!("watching {}", exercise.skeleton_path),
         || print!("{}", running_indicator()),
-        |step| match step {
+        move |step| match step {
             StepOutcome::ExerciseFailed { exercise, outcome } => {
-                hint_tracker.lock().unwrap().set_current_exercise(exercise);
+                hint_tracker_step
+                    .lock()
+                    .unwrap()
+                    .set_current_exercise(exercise);
                 let current_file = file_name(exercise.skeleton_path);
                 let cleaned = filter_test_output(&outcome.output, current_file);
 
@@ -76,20 +107,27 @@ fn main() {
                 print_hint_prompt(plain_mode);
             }
             StepOutcome::ExercisePassed { exercise, .. } => {
-                hint_tracker.lock().unwrap().clear();
+                hint_tracker_step.lock().unwrap().clear();
                 match run_trace(
-                    &workspace_root,
-                    PACKAGE,
+                    workspace_root,
+                    module.package,
                     exercise.test_filter,
                     exercise.fixture,
+                    exercise.target,
                     TRACE_TIMEOUT,
                 ) {
                     Ok(events) => {
+                        if let Some(target) = exercise.target {
+                            print_target_banner(target);
+                        }
                         if plain_mode {
                             println!("{}", render_plain(exercise.fixture, &events));
-                        } else if let Err(err) =
-                            run_interactive(exercise.fixture, events, exercise.name)
-                        {
+                        } else if let Err(err) = run_interactive(
+                            exercise.fixture,
+                            events,
+                            exercise.name,
+                            exercise.target,
+                        ) {
                             eprintln!("trace renderer error: {err}");
                         }
                     }
@@ -113,20 +151,29 @@ fn main() {
                 print_concept_note(plain_mode, exercise.concept_note);
             }
         },
-        || {
+        move || {
             hint_tracker.lock().unwrap().clear();
-            let message = format!("All {} sorting exercises complete! Nice work.", EXERCISES.len());
+            let total_exercises: usize = MODULES.iter().map(|m| m.exercises.len()).sum();
+            let message = completion_message(module.name, next_module_name, total_exercises);
             if plain_mode {
                 println!("\n{message}");
             } else {
                 println!("\n{}", message.green().bold());
             }
         },
-    );
+    )
+}
 
-    if let Err(err) = result {
-        eprintln!("watch error: {err}");
-        std::process::exit(1);
+/// The message printed once a module's exercises are all solved: announces
+/// the next module if one remains, or final completion on the last one.
+fn completion_message(
+    module_name: &str,
+    next_module_name: Option<&str>,
+    total_exercises: usize,
+) -> String {
+    match next_module_name {
+        Some(next) => format!("{module_name} exercises complete! Moving on to {next}..."),
+        None => format!("All {total_exercises} exercises complete! Nice work."),
     }
 }
 
@@ -149,6 +196,10 @@ fn print_status_line(plain_mode: bool, exercise_name: &str, passed: bool) {
     }
 }
 
+fn print_target_banner(target: i32) {
+    println!("target: {target}");
+}
+
 fn print_hint_prompt(plain_mode: bool) {
     if plain_mode {
         println!("[h] show hint (type h and press enter)");
@@ -167,7 +218,7 @@ fn print_concept_note(plain_mode: bool, note: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::file_name;
+    use super::{completion_message, file_name};
 
     #[test]
     fn extracts_the_bare_file_name_from_a_skeleton_path() {
@@ -177,6 +228,21 @@ mod tests {
     #[test]
     fn returns_the_input_unchanged_if_there_is_no_slash() {
         assert_eq!(file_name("bubble.rs"), "bubble.rs");
+    }
+
+    #[test]
+    fn completion_message_announces_the_next_module_when_one_remains() {
+        let message = completion_message("sorting", Some("searching"), 10);
+        assert!(message.contains("sorting"));
+        assert!(message.contains("searching"));
+    }
+
+    #[test]
+    fn completion_message_announces_final_completion_on_the_last_module() {
+        let message = completion_message("searching", None, 10);
+        assert!(message.contains("10"));
+        assert!(message.to_lowercase().contains("complete"));
+        assert!(!message.contains("searching"));
     }
 }
 

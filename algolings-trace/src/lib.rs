@@ -22,6 +22,14 @@ pub enum Event {
     Swap { i: usize, j: usize },
     Set { i: usize, value: i64 },
     MarkSorted { i: usize },
+    /// Search algorithms checking index `i` against a target value. The
+    /// target itself isn't carried here — it's constant for the whole
+    /// trace, shown once by the CLI instead of repeated on every event.
+    Probe { i: usize },
+    /// The target was found at index `i`.
+    Found { i: usize },
+    /// Binary search narrowed its remaining search space to `[left, right)`.
+    NarrowRange { left: usize, right: usize },
 }
 
 thread_local! {
@@ -105,6 +113,23 @@ pub fn mark_sorted(i: usize) {
     record(Event::MarkSorted { i });
 }
 
+/// Checks `arr[i]` against `target`, recording a `Probe` event when tracing
+/// is enabled. Returns whether it matches.
+pub fn probe<T: PartialEq>(arr: &[T], i: usize, target: &T) -> bool {
+    record(Event::Probe { i });
+    &arr[i] == target
+}
+
+/// Records that the target was found at index `i`.
+pub fn found(i: usize) {
+    record(Event::Found { i });
+}
+
+/// Records that the remaining search space narrowed to `[left, right)`.
+pub fn narrow_range(left: usize, right: usize) {
+    record(Event::NarrowRange { left, right });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,5 +157,44 @@ mod tests {
             ]
         );
         disable();
+    }
+
+    #[test]
+    fn probe_records_the_index_and_reports_whether_it_matches_the_target() {
+        enable();
+        let arr = [3, 7, 2, 9, 5];
+        assert!(!probe(&arr, 0, &9));
+        assert!(probe(&arr, 3, &9));
+        assert_eq!(
+            take_events(),
+            vec![Event::Probe { i: 0 }, Event::Probe { i: 3 }]
+        );
+        disable();
+    }
+
+    #[test]
+    fn found_records_the_matching_index() {
+        enable();
+        found(3);
+        assert_eq!(take_events(), vec![Event::Found { i: 3 }]);
+        disable();
+    }
+
+    #[test]
+    fn narrow_range_records_the_new_bounds() {
+        enable();
+        narrow_range(2, 5);
+        assert_eq!(take_events(), vec![Event::NarrowRange { left: 2, right: 5 }]);
+        disable();
+    }
+
+    #[test]
+    fn disabled_probe_found_and_narrow_range_record_nothing() {
+        disable();
+        let arr = [3, 7, 2, 9, 5];
+        let _ = probe(&arr, 0, &9);
+        found(0);
+        narrow_range(0, 5);
+        assert!(take_events().is_empty());
     }
 }
