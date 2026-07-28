@@ -24,7 +24,7 @@ pub fn draw_frame(
     let array_line = render_array_line(&frame.array, &frame.highlighted);
     let status_line = match target {
         Some(t) => format!(
-            "{exercise_name} — target {t} — Step {} of {}",
+            "{exercise_name} — value {t} — Step {} of {}",
             frame.step, frame.total_steps
         ),
         None => format!(
@@ -203,11 +203,14 @@ mod tests {
 
         let content = buffer_text(terminal.backend().buffer());
         assert!(content.contains("bubble_sort — Step 3 of 8"));
-        assert!(!content.contains("target"));
+        assert!(!content.contains("value"));
     }
 
     #[test]
-    fn status_line_shows_the_target_when_present() {
+    fn status_line_shows_the_value_when_present() {
+        // Worded generically ("value", not "target") since this field means
+        // different things per exercise — a search target, a value to
+        // remove, and so on.
         let backend = TestBackend::new(60, 4);
         let mut terminal = Terminal::new(backend).unwrap();
         let f = frame(vec![3, 7, 2, 9, 5], vec![3], 1, 4);
@@ -217,7 +220,7 @@ mod tests {
             .unwrap();
 
         let content = buffer_text(terminal.backend().buffer());
-        assert!(content.contains("target 9"));
+        assert!(content.contains("value 9"));
         assert!(content.contains("linear_search"));
     }
 

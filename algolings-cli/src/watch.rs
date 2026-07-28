@@ -364,11 +364,13 @@ mod tests {
         const FLAG_EXERCISE: &[crate::exercise::Exercise] = &[crate::exercise::Exercise {
             name: "flag",
             test_filter: "flag_check",
+            trace_key: "flag_check",
             skeleton_path: "flag.txt",
             fixture: &[1],
             concept_note: "n/a",
             hints: &["hint"],
             target: None,
+            starts_empty: false,
         }];
         let mut state = MultiExerciseState::new(FLAG_EXERCISE);
 

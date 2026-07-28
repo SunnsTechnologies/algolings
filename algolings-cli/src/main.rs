@@ -111,19 +111,25 @@ fn run_module(
                 match run_trace(
                     workspace_root,
                     module.package,
-                    exercise.test_filter,
+                    exercise.trace_key,
                     exercise.fixture,
                     exercise.target,
                     TRACE_TIMEOUT,
                 ) {
                     Ok(events) => {
-                        if let Some(target) = exercise.target {
-                            print_target_banner(target);
+                        if let Some(value) = exercise.target {
+                            print_value_banner(value);
                         }
+                        // Exercises whose events themselves ADD the fixture's
+                        // values (e.g. insert) must start from an empty
+                        // picture — starting from fixture and then replaying
+                        // inserts of those same values would double them.
+                        let starting_array: &[i32] =
+                            if exercise.starts_empty { &[] } else { exercise.fixture };
                         if plain_mode {
-                            println!("{}", render_plain(exercise.fixture, &events));
+                            println!("{}", render_plain(starting_array, &events));
                         } else if let Err(err) = run_interactive(
-                            exercise.fixture,
+                            starting_array,
                             events,
                             exercise.name,
                             exercise.target,
@@ -196,8 +202,8 @@ fn print_status_line(plain_mode: bool, exercise_name: &str, passed: bool) {
     }
 }
 
-fn print_target_banner(target: i32) {
-    println!("target: {target}");
+fn print_value_banner(value: i32) {
+    println!("value: {value}");
 }
 
 fn print_hint_prompt(plain_mode: bool) {

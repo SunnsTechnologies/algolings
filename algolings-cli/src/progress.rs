@@ -85,20 +85,24 @@ mod tests {
         Exercise {
             name: "one",
             test_filter: "one",
+            trace_key: "one",
             skeleton_path: "one.rs",
             fixture: &[1],
             concept_note: "n/a",
             hints: &["hint"],
             target: None,
+            starts_empty: false,
         },
         Exercise {
             name: "two",
             test_filter: "two",
+            trace_key: "two",
             skeleton_path: "two.rs",
             fixture: &[2],
             concept_note: "n/a",
             hints: &["hint"],
             target: None,
+            starts_empty: false,
         },
     ];
 

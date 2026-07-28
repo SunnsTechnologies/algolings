@@ -7,6 +7,8 @@ members = [
     "exercises/sort-solutions",
     "exercises/search",
     "exercises/search-solutions",
+    "exercises/linked-list",
+    "exercises/linked-list-solutions",
 ]
 # Without this, `cargo run` from the workspace root is ambiguous across the
 # binary-producing packages (algolings, exercises-sort-trace,

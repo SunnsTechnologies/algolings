@@ -57,21 +57,25 @@ mod tests {
     const EX_A: Exercise = Exercise {
         name: "a",
         test_filter: "a",
+        trace_key: "a",
         skeleton_path: "a.rs",
         fixture: &[1],
         concept_note: "n/a",
         hints: &["a-hint-1", "a-hint-2"],
         target: None,
+        starts_empty: false,
     };
 
     const EX_B: Exercise = Exercise {
         name: "b",
         test_filter: "b",
+        trace_key: "b",
         skeleton_path: "b.rs",
         fixture: &[1],
         concept_note: "n/a",
         hints: &["b-hint-1"],
         target: None,
+        starts_empty: false,
     };
 
     #[test]

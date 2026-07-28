@@ -30,6 +30,12 @@ pub enum Event {
     Found { i: usize },
     /// Binary search narrowed its remaining search space to `[left, right)`.
     NarrowRange { left: usize, right: usize },
+    /// A value was inserted at index `i` (a linked list's value sequence
+    /// growing by one).
+    Insert { i: usize, value: i64 },
+    /// The value at index `i` was removed (the value sequence shrinking by
+    /// one).
+    Remove { i: usize },
 }
 
 thread_local! {
@@ -130,6 +136,28 @@ pub fn narrow_range(left: usize, right: usize) {
     record(Event::NarrowRange { left, right });
 }
 
+/// Records that `value` was inserted at index `i`. Record-only, unlike
+/// `swap`/`set_at`: a linked list has no array to operate through, so the
+/// caller's own `Box`/`Option` mutation does the real work — this just logs
+/// it happened, the same way `mark_sorted` already does.
+pub fn mark_inserted<T: Copy + Into<i64>>(i: usize, value: T) {
+    record(Event::Insert { i, value: value.into() });
+}
+
+/// Records that the value at index `i` was removed. Record-only, same
+/// reasoning as [`mark_inserted`].
+pub fn mark_removed(i: usize) {
+    record(Event::Remove { i });
+}
+
+/// Records that index `i` was visited while walking a structure with no
+/// indexable array to check against directly (e.g. a linked list traversal)
+/// — the caller does its own comparison and calls this purely to log the
+/// step, unlike [`probe`] which both checks and records.
+pub fn mark_visited(i: usize) {
+    record(Event::Probe { i });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -195,6 +223,39 @@ mod tests {
         let _ = probe(&arr, 0, &9);
         found(0);
         narrow_range(0, 5);
+        assert!(take_events().is_empty());
+    }
+
+    #[test]
+    fn mark_inserted_records_the_index_and_value() {
+        enable();
+        mark_inserted(2, 42i32);
+        assert_eq!(take_events(), vec![Event::Insert { i: 2, value: 42 }]);
+        disable();
+    }
+
+    #[test]
+    fn mark_removed_records_the_index() {
+        enable();
+        mark_removed(1);
+        assert_eq!(take_events(), vec![Event::Remove { i: 1 }]);
+        disable();
+    }
+
+    #[test]
+    fn mark_visited_records_a_probe_event() {
+        enable();
+        mark_visited(4);
+        assert_eq!(take_events(), vec![Event::Probe { i: 4 }]);
+        disable();
+    }
+
+    #[test]
+    fn disabled_insert_remove_and_visit_record_nothing() {
+        disable();
+        mark_inserted(0, 1i32);
+        mark_removed(0);
+        mark_visited(0);
         assert!(take_events().is_empty());
     }
 }

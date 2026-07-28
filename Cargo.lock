@@ -351,6 +351,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "exercises-linked-list"
+version = "0.1.0"
+dependencies = [
+ "algolings-trace",
+ "serde_json",
+]
+
+[[package]]
 name = "exercises-search"
 version = "0.1.0"
 dependencies = [
@@ -659,6 +667,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f50e8f47623268b5407192d26876c4d7f89d686ca130fdc53bced4814cd29f8"
 dependencies = [
  "bitflags 2.13.1",
+]
+
+[[package]]
+name = "linked-list-solutions"
+version = "0.1.0"
+dependencies = [
+ "algolings-trace",
+ "serde_json",
 ]
 
 [[package]]

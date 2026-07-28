@@ -18,8 +18,19 @@ pub struct Exercise {
     /// interchangeable — a filter that matches zero tests reports a
     /// trivial pass, so getting this wrong silently shows an unsolved
     /// exercise as PASSED (a real bug caught during end-to-end testing).
-    /// Also used as the dispatch key in the `<package>-trace` binaries.
+    /// For most exercises this is short (e.g. "bubble"); linked-list
+    /// exercises anchor it to a module path prefix (e.g. "insert::tests::")
+    /// since cargo's substring filter match could otherwise cross into a
+    /// sibling exercise's still-unsolved tests when they share one struct.
     pub test_filter: &'static str,
+    /// The dispatch key `<package>-trace` binaries match on (a `main.rs`
+    /// argv, not a cargo filter). For sort/search this equals `test_filter`
+    /// exactly — they happen to be the same short name. It's a SEPARATE
+    /// field because linked-list's `test_filter` is anchored (see above)
+    /// while the trace dispatcher still expects the bare name; conflating
+    /// them here would repeat the exact test_filter/name bug this project
+    /// already got bitten by once.
+    pub trace_key: &'static str,
     pub skeleton_path: &'static str,
     pub fixture: &'static [i32],
     pub concept_note: &'static str,
@@ -27,10 +38,16 @@ pub struct Exercise {
     /// the design review's Pass 7 resolution. Requested one at a time via
     /// `[h]` while an exercise is failing.
     pub hints: &'static [&'static str],
-    /// The value being searched for, shown once to the learner before the
-    /// trace starts. `None` for sorting exercises, which don't search for
-    /// anything; `Some(n)` for search exercises.
+    /// The value being searched for, or acted on (e.g. removed) — shown
+    /// once to the learner before the trace starts. `None` when the
+    /// exercise doesn't need one.
     pub target: Option<i32>,
+    /// Whether the trace's starting picture should be empty rather than
+    /// `fixture`'s values. `false` everywhere except exercises whose
+    /// events themselves ADD the fixture's values (e.g. `insert`) — for
+    /// those, starting from `fixture` and then replaying inserts of the
+    /// same values would double them.
+    pub starts_empty: bool,
 }
 
 /// One module of the curriculum: a package of skeleton exercises, its
@@ -60,12 +77,20 @@ pub const MODULES: &[Module] = &[
         watch_dir: "exercises/search/src",
         exercises: SEARCH_EXERCISES,
     },
+    Module {
+        name: "linked lists",
+        package: "exercises-linked-list",
+        solutions_package: "linked-list-solutions",
+        watch_dir: "exercises/linked-list/src",
+        exercises: LINKED_LIST_EXERCISES,
+    },
 ];
 
 pub const SORT_EXERCISES: &[Exercise] = &[
     Exercise {
         name: "bubble_sort",
         test_filter: "bubble",
+        trace_key: "bubble",
         skeleton_path: "exercises/sort/src/bubble.rs",
         fixture: &[5, 1, 4, 2, 8],
         concept_note: "Why `cmp_lt`/`swap` instead of `<`/`.swap()`? They're normal \
@@ -79,10 +104,12 @@ pub const SORT_EXERCISES: &[Exercise] = &[
              and `mark_sorted(n)` once a pass makes no swaps.",
         ],
         target: None,
+        starts_empty: false,
     },
     Exercise {
         name: "selection_sort",
         test_filter: "selection",
+        trace_key: "selection",
         skeleton_path: "exercises/sort/src/selection.rs",
         fixture: &[29, 10, 14, 37, 13],
         concept_note: "Why track `min_index` instead of the minimum value itself? \
@@ -97,10 +124,12 @@ pub const SORT_EXERCISES: &[Exercise] = &[
              min_index)` only if `min_index != i`.",
         ],
         target: None,
+        starts_empty: false,
     },
     Exercise {
         name: "insertion_sort",
         test_filter: "insertion",
+        trace_key: "insertion",
         skeleton_path: "exercises/sort/src/insertion.rs",
         fixture: &[12, 11, 13, 5, 6],
         concept_note: "Why copy `arr[i]` into a local `key` before touching the array? \
@@ -115,10 +144,12 @@ pub const SORT_EXERCISES: &[Exercise] = &[
              shifting, and `set_at` for both the shift and the final placement.",
         ],
         target: None,
+        starts_empty: false,
     },
     Exercise {
         name: "merge_sort",
         test_filter: "merge",
+        trace_key: "merge",
         skeleton_path: "exercises/sort/src/merge.rs",
         fixture: &[5, 1, 4, 2, 8, 7, 3, 6],
         concept_note: "Why recurse on index ranges into ONE slice instead of splitting \
@@ -133,10 +164,12 @@ pub const SORT_EXERCISES: &[Exercise] = &[
              `cmp_lt_values` and `set_at` to write the merged result back into `arr`.",
         ],
         target: None,
+        starts_empty: false,
     },
     Exercise {
         name: "quick_sort",
         test_filter: "quick",
+        trace_key: "quick",
         skeleton_path: "exercises/sort/src/quick.rs",
         fixture: &[10, 7, 8, 9, 1, 5],
         concept_note: "Why `isize` instead of `usize` for the partition bounds? The \
@@ -151,10 +184,12 @@ pub const SORT_EXERCISES: &[Exercise] = &[
              pivot`, and `swap` to move qualifying elements left.",
         ],
         target: None,
+        starts_empty: false,
     },
     Exercise {
         name: "shell_sort",
         test_filter: "shell",
+        trace_key: "shell",
         skeleton_path: "exercises/sort/src/shell.rs",
         fixture: &[12, 34, 54, 2, 3],
         concept_note: "Why guard every `j - gap` with `j >= gap` first? `j` and `gap` \
@@ -168,10 +203,12 @@ pub const SORT_EXERCISES: &[Exercise] = &[
              underflow.",
         ],
         target: None,
+        starts_empty: false,
     },
     Exercise {
         name: "counting_sort",
         test_filter: "counting",
+        trace_key: "counting",
         skeleton_path: "exercises/sort/src/counting.rs",
         fixture: &[5, 1, 4, 2, 8, 1, 4],
         concept_note: "Notice this trace has zero Compare or Swap events — only Set. \
@@ -187,10 +224,12 @@ pub const SORT_EXERCISES: &[Exercise] = &[
              given by its running count, then copy `output` back into `arr`.",
         ],
         target: None,
+        starts_empty: false,
     },
     Exercise {
         name: "radix_sort",
         test_filter: "radix",
+        trace_key: "radix",
         skeleton_path: "exercises/sort/src/radix.rs",
         fixture: &[170, 45, 75, 90, 802, 24, 2, 66],
         concept_note: "This assumes non-negative values — true for every algolings \
@@ -206,6 +245,7 @@ pub const SORT_EXERCISES: &[Exercise] = &[
              output buffer.",
         ],
         target: None,
+        starts_empty: false,
     },
 ];
 
@@ -213,6 +253,7 @@ pub const SEARCH_EXERCISES: &[Exercise] = &[
     Exercise {
         name: "linear_search",
         test_filter: "linear",
+        trace_key: "linear",
         skeleton_path: "exercises/search/src/linear.rs",
         fixture: &[3, 7, 2, 9, 5],
         concept_note: "Why does this return `Option<usize>` instead of, say, -1 for \
@@ -228,10 +269,12 @@ pub const SEARCH_EXERCISES: &[Exercise] = &[
              exactly where the search succeeded.",
         ],
         target: Some(9),
+        starts_empty: false,
     },
     Exercise {
         name: "binary_search",
         test_filter: "binary",
+        trace_key: "binary",
         skeleton_path: "exercises/search/src/binary.rs",
         fixture: &[2, 5, 8, 12, 16, 23, 38, 56, 72, 91],
         concept_note: "Why `left + (right - left) / 2` instead of `(left + right) / 2`? \
@@ -252,6 +295,78 @@ pub const SEARCH_EXERCISES: &[Exercise] = &[
         // this implementation checks, so the trace actually shows a
         // narrowing step or two instead of finding it on the first probe.
         target: Some(16),
+        starts_empty: false,
+    },
+];
+
+pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
+    Exercise {
+        name: "insert",
+        test_filter: "insert::tests::",
+        trace_key: "insert",
+        skeleton_path: "exercises/linked-list/src/insert.rs",
+        fixture: &[10, 20, 30],
+        concept_note: "Why does push_back need to walk the whole list instead of \
+            jumping straight to the end the way an array's push does? There's no \
+            stored length or tail pointer — reaching \"the end\" means following \
+            `next` pointers from `head` until one is `None`, an O(n) walk arrays \
+            never pay for indexed access.",
+        hints: &[
+            "push_front attaches at index 0 directly. push_back needs to walk to \
+             the end first — there's no shortcut.",
+            "Use `self.head.take()` to move the current head out, then wrap it in \
+             a new `Box` as the new node's `next`.",
+            "Call `mark_inserted(i, value)` right where you attach the new node — \
+             `i` is 0 for push_front, or `self.len()` for push_back.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "remove",
+        test_filter: "remove::tests::",
+        trace_key: "remove",
+        skeleton_path: "exercises/linked-list/src/remove.rs",
+        fixture: &[10, 20, 30],
+        concept_note: "Why `current.take()` instead of just reading through \
+            `current`? `.take()` moves the boxed node OUT of the list temporarily, \
+            leaving `None` behind, so you can decide whether to keep it, splice \
+            around it, or put it back — you can't make that kind of \
+            ownership-transferring decision through a shared reference.",
+        hints: &[
+            "Walk the list looking for a node whose value matches, tracking the \
+             index as you go.",
+            "Use `current.take()` to move a node out of the list temporarily, so \
+             you can either keep it or splice around it.",
+            "If the value matches, replace `*current` with `boxed_node.next.take()` \
+             and call `mark_removed(i)`; otherwise put `boxed_node` back with \
+             `*current = Some(boxed_node)` and advance to \
+             `&mut current.as_mut().unwrap().next`.",
+        ],
+        target: Some(20),
+        starts_empty: false,
+    },
+    Exercise {
+        name: "traverse",
+        test_filter: "traverse::tests::",
+        trace_key: "traverse",
+        skeleton_path: "exercises/linked-list/src/traverse.rs",
+        fixture: &[10, 20, 30],
+        concept_note: "Why `.as_deref()` instead of just following `.next` on the \
+            `Box` directly? `Option<Box<Node<T>>>` doesn't chain the way you'd \
+            hope — `.as_deref()` converts it to `Option<&Node<T>>` so you can walk \
+            node to node using shared references, without taking ownership of \
+            anything.",
+        hints: &[
+            "Walk from `self.head` using `.as_deref()` to get shared references, \
+             not ownership.",
+            "Compare each node's value to the target, calling `mark_visited(i)` \
+             for every position you check.",
+            "Call `found(i)` and return as soon as you find a match; if you reach \
+             `None` without matching, the value isn't in the list.",
+        ],
+        target: Some(20),
+        starts_empty: false,
     },
 ];
 
@@ -380,6 +495,23 @@ mod tests {
             sorted.as_slice(),
             "binary_search's fixture must be sorted"
         );
+    }
+
+    #[test]
+    fn every_trace_key_is_a_bare_dispatch_name_not_an_anchored_filter() {
+        // Regression test: caught live when test_filter's D14 anchoring
+        // ("insert::tests::") accidentally also broke the trace dispatch
+        // binary's argv match, which expects the bare name ("insert").
+        // trace_key must never carry the "::" anchor test_filter uses.
+        for exercise in all_exercises() {
+            assert!(
+                !exercise.trace_key.contains("::"),
+                "{}'s trace_key ({:?}) looks like an anchored test_filter, not a bare \
+                 dispatch key",
+                exercise.name,
+                exercise.trace_key
+            );
+        }
     }
 
     #[test]

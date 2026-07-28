@@ -54,8 +54,12 @@ mod tests {
                 Event::Set { i, .. } => assert!(*i < 8, "Set index {i} out of global range"),
                 Event::MarkSorted { i } => assert!(*i < 8),
                 Event::Swap { .. } => panic!("merge sort should never emit Swap events"),
-                Event::Probe { .. } | Event::Found { .. } | Event::NarrowRange { .. } => {
-                    panic!("merge sort should never emit search events")
+                Event::Probe { .. }
+                | Event::Found { .. }
+                | Event::NarrowRange { .. }
+                | Event::Insert { .. }
+                | Event::Remove { .. } => {
+                    panic!("merge sort should never emit search or linked-list events")
                 }
             }
         }
