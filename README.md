@@ -64,6 +64,7 @@ cargo run -- --plain
 | 1 | Insert (push_front/push_back) | Why reaching "the end" means walking from `head`, not indexing |
 | 2 | Remove | `current.take()` to move a node out of the list before deciding what to do with it |
 | 3 | Traverse | `.as_deref()` to walk `Option<Box<Node<T>>>` with shared references, not ownership |
+| 4 | Reverse | Reversing in place with three tracked pointers (`prev`/`current`/`next`), no new list allocated |
 
 Each exercise's full write-up (complexity analysis, walkthrough, alternative implementations) is also available at [learn.sunnstech.com](https://learn.sunnstech.com) if you want the deeper version.
 
@@ -113,7 +114,7 @@ exercises/tests-shared/            one test suite per exercise, shared by both c
 
 ## Contributing
 
-Found a bug, or want to help finish the linked-list module (doubly-linked list, reversing, Floyd's cycle detection) or port the next one (stacks & queues, hash tables, recursion & backtracking, trees, graphs, dynamic programming)? Issues and PRs welcome.
+Found a bug, or want to help finish the linked-list module (doubly-linked list, Floyd's cycle detection) or port the next one (stacks & queues, hash tables, recursion & backtracking, trees, graphs, dynamic programming)? Issues and PRs welcome.
 
 To verify the whole repo (not just the exercises you're working on), use:
 

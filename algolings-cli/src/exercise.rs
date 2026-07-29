@@ -368,6 +368,30 @@ pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
         target: Some(20),
         starts_empty: false,
     },
+    Exercise {
+        name: "reverse",
+        test_filter: "reverse::tests::",
+        trace_key: "reverse",
+        skeleton_path: "exercises/linked-list/src/reverse.rs",
+        fixture: &[1, 2, 3],
+        concept_note: "Notice the trace shows values leaving the front of one \
+            section and joining the front of another — that's exactly what the \
+            algorithm does. Each node gets `.take()`n out and re-linked with its \
+            `next` pointing at whatever was reversed so far, one node at a time, \
+            in place, with no new list ever allocated.",
+        hints: &[
+            "Track three things as you walk: the node before (`prev`, starts \
+             `None`), the current node, and the node after it (saved before you \
+             touch anything).",
+            "Use `current.take()` to move a node out, then point its `next` at \
+             `prev` before advancing both.",
+            "Call `mark_removed(0)` and `mark_inserted(remaining_len, value)` for \
+             each node — `remaining_len` is how many nodes are still unprocessed \
+             after this one leaves.",
+        ],
+        target: None,
+        starts_empty: false,
+    },
 ];
 
 pub fn find_by_skeleton_path(path: &str) -> Option<&'static Exercise> {

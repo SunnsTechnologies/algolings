@@ -35,6 +35,11 @@ fn main() {
             enable();
             list.contains(target);
         }
+        "reverse" => {
+            let mut list = SinglyLinkedList::from_values(&fixture);
+            enable();
+            list.reverse();
+        }
         other => {
             eprintln!("unknown exercise: {other}");
             std::process::exit(2);
