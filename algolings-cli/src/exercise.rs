@@ -418,6 +418,32 @@ pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
         target: None,
         starts_empty: true,
     },
+    Exercise {
+        name: "doubly_pop",
+        test_filter: "doubly_pop::tests::",
+        trace_key: "doubly_pop",
+        skeleton_path: "exercises/linked-list/src/doubly_pop.rs",
+        fixture: &[1, 2, 3, 4],
+        concept_note: "Why does pop_back need `prev` at all, instead of just knowing \
+            where `tail` is? Removing the tail means someone else has to become the \
+            new tail — and you need to find that node. A singly-linked list, even \
+            with its own stored tail pointer, has no way to reach the node BEFORE \
+            the tail without walking from `head` all the way there: it's O(n) hiding \
+            behind an O(1)-looking pointer. `prev` is what makes finding it, and \
+            fixing it up, actually O(1).",
+        hints: &[
+            "pop_front needs to null out the NEW head's `prev` — it's still \
+             pointing (via `Weak`) at the node you just removed.",
+            "pop_back needs to find the new tail by upgrading the removed node's \
+             `prev` — a singly-linked list has no way to do this in O(1), which is \
+             exactly what backward links buy you.",
+            "Call `mark_removed(0)` for pop_front, or `mark_removed(self.len() - 1)` \
+             for pop_back — read the length before updating it, same as \
+             doubly_push's push_back did for insertion.",
+        ],
+        target: None,
+        starts_empty: false,
+    },
 ];
 
 /// Cargo's `--lib <filter>` matches as a plain substring anywhere in the

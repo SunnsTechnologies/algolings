@@ -66,6 +66,7 @@ cargo run -- --plain
 | 3 | Traverse | `.as_deref()` to walk `Option<Box<Node<T>>>` with shared references, not ownership |
 | 4 | Reverse | Reversing in place with three tracked pointers (`prev`/`current`/`next`), no new list allocated |
 | 5 | Doubly-linked push | `Rc<RefCell<Node>>` for forward links, `Weak` for backward — a strong reference both ways would leak the whole list |
+| 6 | Doubly-linked pop | `prev` turns "find the node before the tail" from an O(n) walk into an O(1) upgrade |
 
 Each exercise's full write-up (complexity analysis, walkthrough, alternative implementations) is also available at [learn.sunnstech.com](https://learn.sunnstech.com) if you want the deeper version.
 

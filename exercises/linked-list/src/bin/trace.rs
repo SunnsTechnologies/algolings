@@ -58,6 +58,12 @@ fn main() {
                 list.push_back(value);
             }
         }
+        "doubly_pop" => {
+            let mut list = DoublyLinkedList::from_values(&fixture);
+            enable();
+            list.pop_front();
+            list.pop_back();
+        }
         other => {
             eprintln!("unknown exercise: {other}");
             std::process::exit(2);
