@@ -223,4 +223,35 @@ mod tests {
             .iter()
             .any(|e| matches!(e, algolings_trace::Event::Swap { .. })));
     }
+
+    #[test]
+    fn every_exercises_trace_key_has_a_working_dispatcher_arm() {
+        // Regression test: a trace_key with no matching arm in the
+        // <package>-trace dispatcher binaries compiles fine, passes every
+        // other test, and only fails at runtime — "unknown exercise",
+        // exit 2 — the first time a learner actually solves that specific
+        // exercise. exercise_registry_module_name_actually_matches_its_test_filter
+        // (test_runner.rs) only checks module.exercises[0]'s test_filter;
+        // this checks every exercise's trace_key, in every module.
+        for module in crate::exercise::MODULES {
+            for exercise in module.exercises {
+                let result = run_trace(
+                    &workspace_root(),
+                    module.solutions_package,
+                    exercise.trace_key,
+                    exercise.fixture,
+                    exercise.target,
+                    Duration::from_secs(30),
+                );
+                assert!(
+                    result.is_ok(),
+                    "{:?}'s trace_key ({:?}) failed to trace against {:?}: {:?}",
+                    exercise.name,
+                    exercise.trace_key,
+                    module.solutions_package,
+                    result.err()
+                );
+            }
+        }
+    }
 }
