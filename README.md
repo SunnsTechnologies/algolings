@@ -65,6 +65,7 @@ cargo run -- --plain
 | 2 | Remove | `current.take()` to move a node out of the list before deciding what to do with it |
 | 3 | Traverse | `.as_deref()` to walk `Option<Box<Node<T>>>` with shared references, not ownership |
 | 4 | Reverse | Reversing in place with three tracked pointers (`prev`/`current`/`next`), no new list allocated |
+| 5 | Doubly-linked push | `Rc<RefCell<Node>>` for forward links, `Weak` for backward — a strong reference both ways would leak the whole list |
 
 Each exercise's full write-up (complexity analysis, walkthrough, alternative implementations) is also available at [learn.sunnstech.com](https://learn.sunnstech.com) if you want the deeper version.
 

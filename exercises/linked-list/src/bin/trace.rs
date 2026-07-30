@@ -13,7 +13,7 @@
 //! always reflects the CURRENT on-disk solution code.
 
 use algolings_trace::{enable, take_events};
-use exercises_linked_list::SinglyLinkedList;
+use exercises_linked_list::{DoublyLinkedList, SinglyLinkedList};
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -50,6 +50,13 @@ fn main() {
             let mut list = SinglyLinkedList::from_values(&fixture);
             enable();
             list.reverse();
+        }
+        "doubly_push" => {
+            let mut list = DoublyLinkedList::new();
+            enable();
+            for value in fixture {
+                list.push_back(value);
+            }
         }
         other => {
             eprintln!("unknown exercise: {other}");

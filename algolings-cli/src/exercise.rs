@@ -392,6 +392,32 @@ pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
         target: None,
         starts_empty: false,
     },
+    Exercise {
+        name: "doubly_push",
+        test_filter: "doubly_push::tests::",
+        trace_key: "doubly_push",
+        skeleton_path: "exercises/linked-list/src/doubly_push.rs",
+        fixture: &[1, 2, 3],
+        concept_note: "Why is push_back O(1) here when the singly-linked version \
+            had to walk the whole list? The stored `tail` pointer — not being \
+            doubly-linked itself — is what gets you there; a singly-linked list \
+            with its own tail pointer would be just as fast. What backward links \
+            (`prev`, via `Weak`) actually buy you — O(1) removal from a known \
+            node, walking backward — is what a later exercise puts to use.",
+        hints: &[
+            "push_front and push_back both need to wire `prev` too, not just \
+             `next` — use `Rc::downgrade(&new_node)` to make a `Weak` reference, \
+             never a strong `Rc`, or you'll create a reference cycle.",
+            "The list keeps a `tail` pointer specifically so push_back never has \
+             to walk to find the end — update it directly instead of searching.",
+            "Call `mark_inserted(0, value)` for push_front, or \
+             `mark_inserted(self.len(), value)` for push_back (before updating \
+             `len`) — and remember to update `self.len` yourself, it isn't \
+             computed by walking here.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
 ];
 
 /// Cargo's `--lib <filter>` matches as a plain substring anywhere in the
@@ -401,6 +427,7 @@ pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
 /// substring of `"doubly_insert::tests::"`), which the simpler
 /// exact-duplicate check can't catch. Returns the first colliding pair's
 /// indices found, if any.
+#[cfg(test)]
 fn find_substring_collision(filters: &[&str]) -> Option<(usize, usize)> {
     for (i, a) in filters.iter().enumerate() {
         for (j, b) in filters.iter().enumerate() {
