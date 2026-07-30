@@ -58,7 +58,8 @@ mod tests {
                 | Event::Found { .. }
                 | Event::NarrowRange { .. }
                 | Event::Insert { .. }
-                | Event::Remove { .. } => {
+                | Event::Remove { .. }
+                | Event::Converge { .. } => {
                     panic!("merge sort should never emit search or linked-list events")
                 }
             }

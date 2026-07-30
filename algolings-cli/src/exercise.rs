@@ -444,6 +444,53 @@ pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
         target: None,
         starts_empty: false,
     },
+    Exercise {
+        name: "doubly_contains",
+        test_filter: "doubly_contains::tests::",
+        trace_key: "doubly_contains",
+        skeleton_path: "exercises/linked-list/src/doubly_contains.rs",
+        fixture: &[10, 20, 30, 40, 50],
+        concept_note: "This is almost the same code as the singly-linked list's \
+            `contains` — the only real difference is ownership. `Option<Box<Node>>` \
+            walks with `.as_deref()`; `Option<Rc<RefCell<Node>>>` walks by cloning \
+            the `Rc` and reading through `.borrow()`. The search itself is still \
+            purely forward, one node at a time, exactly like a singly-linked list — \
+            having `prev` doesn't help here at all.",
+        hints: &[
+            "Walk from `self.head`, cloning each node's `Rc` to move to the next \
+             one — `Option<Rc<RefCell<Node>>>` doesn't support `.as_deref()` the \
+             way `Option<Box<Node>>` does.",
+            "Call `mark_visited(i)` for every node you check, and `found(i)` the \
+             moment you find a match.",
+            "Read a node's value through `.borrow()` — `node.borrow().value`.",
+        ],
+        target: Some(40),
+        starts_empty: false,
+    },
+    Exercise {
+        name: "doubly_converge",
+        test_filter: "doubly_converge::tests::",
+        trace_key: "doubly_converge",
+        skeleton_path: "exercises/linked-list/src/doubly_converge.rs",
+        fixture: &[10, 20, 30, 40, 50],
+        concept_note: "This is the one search a singly-linked list structurally \
+            can't do: check both ends and work inward, without first walking the \
+            whole list to even find the far end's neighbor. Each step covers two \
+            nodes for the price of one meeting-in-the-middle — worst case still \
+            O(n), but the search space shrinks from both sides at once.",
+        hints: &[
+            "Guard the empty-list case first — `self.len() - 1` underflows a \
+             `usize` when the list is empty.",
+            "Track `li` (starts at 0) and `ri` (starts at `self.len() - 1`); when \
+             `li == ri` they're the SAME node — check it once and stop, don't \
+             decrement `ri` past that point.",
+            "Call `mark_converging(li, ri)` once per step, checking both nodes \
+             against `target`; advance `li` forward via `next` and `ri` backward \
+             via `prev`.",
+        ],
+        target: Some(30),
+        starts_empty: false,
+    },
 ];
 
 /// Cargo's `--lib <filter>` matches as a plain substring anywhere in the

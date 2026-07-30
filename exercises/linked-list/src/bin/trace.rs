@@ -64,6 +64,18 @@ fn main() {
             list.pop_front();
             list.pop_back();
         }
+        "doubly_contains" => {
+            let target = parse_target(&mut args);
+            let list = DoublyLinkedList::from_values(&fixture);
+            enable();
+            list.contains(target);
+        }
+        "doubly_converge" => {
+            let target = parse_target(&mut args);
+            let list = DoublyLinkedList::from_values(&fixture);
+            enable();
+            list.contains_converging(target);
+        }
         other => {
             eprintln!("unknown exercise: {other}");
             std::process::exit(2);

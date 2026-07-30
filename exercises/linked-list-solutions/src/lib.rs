@@ -6,6 +6,8 @@ mod reverse;
 mod traverse;
 mod doubly_push;
 mod doubly_pop;
+mod doubly_contains;
+mod doubly_converge;
 
 // Both modules define their own `Node` — re-exporting both under the bare
 // name would collide, so each gets a qualified alias.

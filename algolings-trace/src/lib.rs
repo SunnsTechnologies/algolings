@@ -36,6 +36,11 @@ pub enum Event {
     /// The value at index `i` was removed (the value sequence shrinking by
     /// one).
     Remove { i: usize },
+    /// Two pointers, walking toward each other from opposite ends, are
+    /// simultaneously checking `left` and `right`. Unlike `Probe` (one
+    /// index at a time), this reports both positions in a single event so
+    /// the renderer can highlight them together.
+    Converge { left: usize, right: usize },
 }
 
 thread_local! {
@@ -158,6 +163,13 @@ pub fn mark_visited(i: usize) {
     record(Event::Probe { i });
 }
 
+/// Records that `left` and `right` are being checked simultaneously by two
+/// pointers converging from opposite ends. Record-only, same reasoning as
+/// [`mark_visited`] — the caller does its own comparisons.
+pub fn mark_converging(left: usize, right: usize) {
+    record(Event::Converge { left, right });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -256,6 +268,21 @@ mod tests {
         mark_inserted(0, 1i32);
         mark_removed(0);
         mark_visited(0);
+        assert!(take_events().is_empty());
+    }
+
+    #[test]
+    fn mark_converging_records_both_positions_in_one_event() {
+        enable();
+        mark_converging(1, 3);
+        assert_eq!(take_events(), vec![Event::Converge { left: 1, right: 3 }]);
+        disable();
+    }
+
+    #[test]
+    fn disabled_mark_converging_records_nothing() {
+        disable();
+        mark_converging(1, 3);
         assert!(take_events().is_empty());
     }
 }

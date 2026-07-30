@@ -35,6 +35,9 @@ pub fn apply_event(arr: &mut Vec<i32>, event: &Event) -> (Vec<usize>, String) {
             arr.remove(i);
             (highlighted, description)
         }
+        Event::Converge { left, right } => {
+            (vec![left, right], format!("check [{left}] and [{right}]"))
+        }
     }
 }
 
@@ -130,5 +133,15 @@ mod tests {
         assert_eq!(arr, vec![1, 3]);
         assert_eq!(highlighted, vec![1]);
         assert!(desc.contains('1'));
+    }
+
+    #[test]
+    fn converge_highlights_both_indices_without_changing_values() {
+        let mut arr = vec![3, 7, 2, 9, 5];
+        let (highlighted, desc) =
+            apply_event(&mut arr, &Event::Converge { left: 0, right: 4 });
+        assert_eq!(arr, vec![3, 7, 2, 9, 5]);
+        assert_eq!(highlighted, vec![0, 4]);
+        assert!(desc.contains('0') && desc.contains('4'));
     }
 }

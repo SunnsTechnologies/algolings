@@ -67,6 +67,8 @@ cargo run -- --plain
 | 4 | Reverse | Reversing in place with three tracked pointers (`prev`/`current`/`next`), no new list allocated |
 | 5 | Doubly-linked push | `Rc<RefCell<Node>>` for forward links, `Weak` for backward — a strong reference both ways would leak the whole list |
 | 6 | Doubly-linked pop | `prev` turns "find the node before the tail" from an O(n) walk into an O(1) upgrade |
+| 7 | Doubly-linked contains | Same forward-only search as Traverse, but walking `Rc<RefCell<Node>>` by cloning and borrowing instead of `.as_deref()` |
+| 8 | Converging search | Searching from both ends at once — the one thing a singly-linked list structurally can't do |
 
 Each exercise's full write-up (complexity analysis, walkthrough, alternative implementations) is also available at [learn.sunnstech.com](https://learn.sunnstech.com) if you want the deeper version.
 
