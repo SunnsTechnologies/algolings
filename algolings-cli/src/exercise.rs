@@ -394,6 +394,24 @@ pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
     },
 ];
 
+/// Cargo's `--lib <filter>` matches as a plain substring anywhere in the
+/// full test path — not just an exact match or a module prefix. Two
+/// exercises whose `test_filter`s are different STRINGS can still collide
+/// if one is contained in the other (e.g. `"insert::tests::"` is a
+/// substring of `"doubly_insert::tests::"`), which the simpler
+/// exact-duplicate check can't catch. Returns the first colliding pair's
+/// indices found, if any.
+fn find_substring_collision(filters: &[&str]) -> Option<(usize, usize)> {
+    for (i, a) in filters.iter().enumerate() {
+        for (j, b) in filters.iter().enumerate() {
+            if i != j && b.contains(a) {
+                return Some((i, j));
+            }
+        }
+    }
+    None
+}
+
 pub fn find_by_skeleton_path(path: &str) -> Option<&'static Exercise> {
     MODULES
         .iter()
@@ -486,6 +504,44 @@ mod tests {
                 "duplicate test_filter found in module {:?}",
                 module.name
             );
+        }
+    }
+
+    #[test]
+    fn find_substring_collision_detects_a_real_collision() {
+        // "insert::tests::" is a genuine substring of
+        // "doubly_insert::tests::" — this is the exact collision that
+        // would have shipped undetected without this check.
+        let filters = ["insert::tests::", "doubly_insert::tests::"];
+        assert_eq!(find_substring_collision(&filters), Some((0, 1)));
+    }
+
+    #[test]
+    fn find_substring_collision_ignores_genuinely_unrelated_filters() {
+        let filters = ["insert::tests::", "remove::tests::", "traverse::tests::"];
+        assert_eq!(find_substring_collision(&filters), None);
+    }
+
+    #[test]
+    fn no_exercise_test_filter_collides_with_another_within_its_module() {
+        // Scoped per-module, same reasoning as the exact-duplicate check
+        // above — cargo test -p only ever runs one package's tests at a
+        // time, so two DIFFERENT modules sharing a substring relationship
+        // is harmless.
+        for module in MODULES {
+            let filters: Vec<&str> = module.exercises.iter().map(|e| e.test_filter).collect();
+            if let Some((i, j)) = find_substring_collision(&filters) {
+                panic!(
+                    "{:?}'s test_filter {:?} is a substring of {:?}'s test_filter {:?} in \
+                     module {:?} — cargo's filter match would pick up both exercises' tests \
+                     when running either one",
+                    module.exercises[i].name,
+                    filters[i],
+                    module.exercises[j].name,
+                    filters[j],
+                    module.name
+                );
+            }
         }
     }
 
