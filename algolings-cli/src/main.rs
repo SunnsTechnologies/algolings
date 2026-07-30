@@ -11,6 +11,7 @@ use std::time::Duration;
 
 const DEBOUNCE_PERIOD: Duration = Duration::from_millis(250);
 const TRACE_TIMEOUT: Duration = Duration::from_secs(5);
+const TEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 fn main() {
     // --plain: sequential-text fallback for screen readers/non-TTY use
@@ -90,6 +91,7 @@ fn run_module(
         module.package,
         &mut state,
         DEBOUNCE_PERIOD,
+        TEST_TIMEOUT,
         None,
         |exercise| println!("watching {}", exercise.skeleton_path),
         || print!("{}", running_indicator()),

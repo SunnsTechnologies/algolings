@@ -61,10 +61,15 @@ impl MultiExerciseState {
         &mut self,
         workspace_root: &std::path::Path,
         package: &str,
+        test_timeout: std::time::Duration,
     ) -> std::io::Result<()> {
         while let Some(exercise) = self.current() {
-            let outcome =
-                crate::test_runner::run_package_tests(workspace_root, package, exercise.test_filter)?;
+            let outcome = crate::test_runner::run_package_tests(
+                workspace_root,
+                package,
+                exercise.test_filter,
+                test_timeout,
+            )?;
             if outcome.passed {
                 self.current_index += 1;
             } else {

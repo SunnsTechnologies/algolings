@@ -101,6 +101,7 @@ pub fn run_multi_exercise_loop(
     package: &str,
     state: &mut MultiExerciseState,
     quiet_period: Duration,
+    test_timeout: Duration,
     max_iterations: Option<u32>,
     mut on_current_exercise: impl FnMut(&crate::exercise::Exercise),
     mut on_settled: impl FnMut(),
@@ -115,7 +116,7 @@ pub fn run_multi_exercise_loop(
     // by the first wait_for_quiet() call once the loop starts.
     let (_watcher, rx) = watch_path(watch_dir)?;
 
-    state.catch_up(workspace_root, package).ok();
+    state.catch_up(workspace_root, package, test_timeout).ok();
     if state.is_complete() {
         on_all_complete();
         return Ok(());
@@ -134,7 +135,8 @@ pub fn run_multi_exercise_loop(
             break;
         };
         let token = debouncer.bump();
-        if let Ok(outcome) = run_package_tests(workspace_root, package, exercise.test_filter)
+        if let Ok(outcome) =
+            run_package_tests(workspace_root, package, exercise.test_filter, test_timeout)
             && debouncer.is_current(token)
         {
             let passed = outcome.passed;
@@ -160,6 +162,8 @@ mod tests {
     use std::sync::mpsc;
     use std::thread;
     use std::time::Duration;
+
+    const A_GENEROUS_TIMEOUT: Duration = Duration::from_secs(30);
 
     #[test]
     fn fresh_token_is_current() {
@@ -266,6 +270,7 @@ mod tests {
             "sort-solutions",
             &mut state,
             Duration::from_millis(30),
+            A_GENEROUS_TIMEOUT,
             Some(0),
             |_| panic!("on_ready should not fire when already complete after catch_up"),
             || {},
@@ -300,6 +305,7 @@ mod tests {
                 "exercises-sort",
                 &mut state,
                 Duration::from_millis(30),
+                A_GENEROUS_TIMEOUT,
                 Some(1),
                 move |exercise| *ready_name_clone.lock().unwrap() = Some(exercise.name),
                 || {},
@@ -386,6 +392,7 @@ mod tests {
                 "flagpkg",
                 &mut state,
                 Duration::from_millis(30),
+                A_GENEROUS_TIMEOUT,
                 None,
                 // Fires once catch_up() has run and confirmed the module
                 // is NOT yet complete — i.e. it genuinely observed "fail",
