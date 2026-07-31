@@ -84,6 +84,13 @@ pub const MODULES: &[Module] = &[
         watch_dir: "exercises/linked-list/src",
         exercises: LINKED_LIST_EXERCISES,
     },
+    Module {
+        name: "stacks & queues",
+        package: "exercises-stacks-queues",
+        solutions_package: "stacks-queues-solutions",
+        watch_dir: "exercises/stacks-queues/src",
+        exercises: STACKS_QUEUES_EXERCISES,
+    },
 ];
 
 pub const SORT_EXERCISES: &[Exercise] = &[
@@ -490,6 +497,102 @@ pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
         ],
         target: Some(30),
         starts_empty: false,
+    },
+];
+
+pub const STACKS_QUEUES_EXERCISES: &[Exercise] = &[
+    Exercise {
+        name: "stack_vec",
+        test_filter: "stack_vec::tests::",
+        trace_key: "stack_vec",
+        skeleton_path: "exercises/stacks-queues/src/stack_vec.rs",
+        fixture: &[10, 20, 30, 40],
+        concept_note: "A stack's whole contract is LIFO — last in, first out — and \
+            Vec's own push/pop already operate on the end of the buffer, which is \
+            exactly what that means. No pointers, no allocation per element beyond \
+            the backing buffer, cache-friendly: Vec is usually the RIGHT choice for \
+            a stack, not just the easy one.",
+        hints: &[
+            "push appends to the end of self.data — call mark_inserted(self.len(), \
+             value) BEFORE pushing, since self.len() is about to change.",
+            "pop and peek both need to check is_empty() first — self.len() - 1 \
+             underflows a usize on an empty stack.",
+            "peek reads the last element without removing it — \
+             self.data.last().copied(), traced with mark_visited.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "stack_linked_list",
+        test_filter: "stack_linked_list::tests::",
+        trace_key: "stack_linked_list",
+        skeleton_path: "exercises/stacks-queues/src/stack_linked_list.rs",
+        fixture: &[10, 20, 30, 40],
+        concept_note: "This is the same push_front/head-removal idiom the \
+            linked-list module's insert/remove exercises already taught you, just \
+            wrapped in its own Stack type. That's not a coincidence — a stack that \
+            only ever touches ONE end of a singly-linked list IS push_front/pop_front, \
+            whatever you name the struct.",
+        hints: &[
+            "push and pop both always operate on self.head — LIFO means the newest \
+             value is always at index 0.",
+            "push: build a new node whose `next` is the OLD head (self.head.take()), \
+             then make it the new head.",
+            "pop: self.head.take().map(...) — the closure gets the old head, unwraps \
+             its next as the new head, and returns its value.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "queue_vecdeque",
+        test_filter: "queue_vecdeque::tests::",
+        trace_key: "queue_vecdeque",
+        skeleton_path: "exercises/stacks-queues/src/queue_vecdeque.rs",
+        fixture: &[10, 20, 30, 40],
+        concept_note: "A queue needs O(1) access at BOTH ends — enqueue at the back, \
+            dequeue at the front. Vec can do the back in O(1) but its remove(0) is \
+            O(n): every remaining element has to shift down one slot. VecDeque is a \
+            ring buffer built specifically to make both ends O(1), which is why it \
+            exists as its own type instead of everyone just using Vec.",
+        hints: &[
+            "enqueue pushes onto the BACK — self.data.push_back(value), traced with \
+             mark_inserted(self.len(), value).",
+            "dequeue and peek both act on the FRONT, always index 0 — check \
+             is_empty() first.",
+            "dequeue: self.data.pop_front(), traced with mark_removed(0).",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "queue_linked_list",
+        test_filter: "queue_linked_list::tests::",
+        trace_key: "queue_linked_list",
+        skeleton_path: "exercises/stacks-queues/src/queue_linked_list.rs",
+        fixture: &[10, 20, 30, 40],
+        concept_note: "A stack only ever touches ONE end of a linked list, so \
+            push_front/pop_front (or their Box<Node> equivalents) are all it needs. \
+            A queue touches BOTH ends — enqueue at the tail, dequeue at the head — so \
+            it needs a stored `tail` reference, or every enqueue would have to walk \
+            the whole list just to find where to attach. `Rc<RefCell<Node>>` gives \
+            you that shared tail reference without needing `Weak` anywhere: nothing \
+            here ever removes from the tail or walks backward, so there's no \
+            reference cycle to guard against the way the doubly-linked list's \
+            pop_back has to.",
+        hints: &[
+            "enqueue: if the list is empty, the new node becomes BOTH head and \
+             tail. Otherwise, wire the OLD tail's `next` to the new node first, \
+             THEN make the new node the tail.",
+            "dequeue: take the head; if there's no next node, the queue is now \
+             empty — null `tail` too, or the next enqueue wires onto an orphaned \
+             node nothing points to anymore.",
+            "At len() == 1, head and tail are the SAME Rc<RefCell<Node>> — never \
+             hold a borrow() and borrow_mut() on both fields at once, or it panics.",
+        ],
+        target: None,
+        starts_empty: true,
     },
 ];
 

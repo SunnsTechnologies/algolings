@@ -375,6 +375,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "exercises-stacks-queues"
+version = "0.1.0"
+dependencies = [
+ "algolings-trace",
+ "serde_json",
+]
+
+[[package]]
 name = "fancy-regex"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1373,6 +1381,14 @@ checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
 
 [[package]]
 name = "sort-solutions"
+version = "0.1.0"
+dependencies = [
+ "algolings-trace",
+ "serde_json",
+]
+
+[[package]]
+name = "stacks-queues-solutions"
 version = "0.1.0"
 dependencies = [
  "algolings-trace",

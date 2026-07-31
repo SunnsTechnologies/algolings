@@ -70,6 +70,15 @@ cargo run -- --plain
 | 7 | Doubly-linked contains | Same forward-only search as Traverse, but walking `Rc<RefCell<Node>>` by cloning and borrowing instead of `.as_deref()` |
 | 8 | Converging search | Searching from both ends at once — the one thing a singly-linked list structurally can't do |
 
+**Stacks & queues** — same value sequences, but access is restricted to one or both ends on purpose:
+
+| # | Exercise | Idiom you'll hit |
+|---|----------|-------------------|
+| 1 | Stack (Vec-backed) | `Vec`'s own push/pop already operate on the end — no pointers needed for LIFO |
+| 2 | Stack (linked-list-backed) | The same push_front/pop_front idiom from Insert/Remove, wrapped in its own type |
+| 3 | Queue (VecDeque-backed) | Why `Vec::remove(0)` being O(n) is exactly the problem a ring buffer solves |
+| 4 | Queue (linked-list-backed) | `Rc<RefCell<Node>>` for a shared `tail` reference, with no `Weak` needed — nothing here ever walks backward |
+
 Each exercise's full write-up (complexity analysis, walkthrough, alternative implementations) is also available at [learn.sunnstech.com](https://learn.sunnstech.com) if you want the deeper version.
 
 ## While you're solving an exercise
@@ -91,12 +100,12 @@ Compared elements are marked with both color *and* a `*` glyph — never color a
 
 ## How it works
 
-algolings is organized into modules (sorting, searching, linked lists, ...), each a pair of crates:
+algolings is organized into modules (sorting, searching, linked lists, stacks & queues, ...), each a pair of crates:
 
-- **`algolings-trace`** — the tracing primitives (`cmp_lt`, `cmp_lt_values`, `swap`, `set_at`, `mark_sorted`, `probe`, `found`, `narrow_range`, `mark_inserted`, `mark_removed`, `mark_visited`). Exercise solutions call these instead of raw `<` / `.swap()` / `==` — same behavior, but it lets algolings record what *your* solution actually did.
+- **`algolings-trace`** — the tracing primitives (`cmp_lt`, `cmp_lt_values`, `swap`, `set_at`, `mark_sorted`, `probe`, `found`, `narrow_range`, `mark_inserted`, `mark_removed`, `mark_visited`, `mark_converging`). Exercise solutions call these instead of raw `<` / `.swap()` / `==` — same behavior, but it lets algolings record what *your* solution actually did.
 - **`algolings-cli`** — the `algolings` binary: watches the current module's exercise files, runs their tests, renders the trace, and moves on to the next module once one's fully solved.
-- **`exercises/sort`**, **`exercises/search`**, **`exercises/linked-list`** — the exercises you edit. Each one ships broken (`todo!()`).
-- **`exercises/sort-solutions`**, **`exercises/search-solutions`**, **`exercises/linked-list-solutions`** — reference solutions, used by CI to prove every exercise is solvable, and as the source for hints and concept notes.
+- **`exercises/sort`**, **`exercises/search`**, **`exercises/linked-list`**, **`exercises/stacks-queues`** — the exercises you edit. Each one ships broken (`todo!()`).
+- **`exercises/sort-solutions`**, **`exercises/search-solutions`**, **`exercises/linked-list-solutions`**, **`exercises/stacks-queues-solutions`** — reference solutions, used by CI to prove every exercise is solvable, and as the source for hints and concept notes.
 
 When you save a file, algolings runs `cargo test` against it. If it passes, algolings runs a *separate* subprocess (`cargo run --bin <package>-trace`) with tracing enabled against your now-correct solution, and animates the result. Running the trace as its own subprocess — rather than linking your code into the long-running watch process — means it always reflects what you just saved, and a genuinely broken infinite loop can be killed outright instead of hanging the tool.
 
@@ -113,12 +122,14 @@ exercises/search/                  searching exercises you edit (start broken)
 exercises/search-solutions/        searching reference solutions (used by CI + hints)
 exercises/linked-list/             linked-list exercises you edit (start broken)
 exercises/linked-list-solutions/   linked-list reference solutions (used by CI + hints)
+exercises/stacks-queues/           stacks & queues exercises you edit (start broken)
+exercises/stacks-queues-solutions/ stacks & queues reference solutions (used by CI + hints)
 exercises/tests-shared/            one test suite per exercise, shared by both crates in its module
 ```
 
 ## Contributing
 
-Found a bug, or want to help finish the linked-list module (doubly-linked list, Floyd's cycle detection) or port the next one (stacks & queues, hash tables, recursion & backtracking, trees, graphs, dynamic programming)? Issues and PRs welcome.
+Found a bug, or want to help finish the linked-list module (Floyd's cycle detection) or port the next one (hash tables, recursion & backtracking, trees, graphs, dynamic programming)? Issues and PRs welcome.
 
 To verify the whole repo (not just the exercises you're working on), use:
 
