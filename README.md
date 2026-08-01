@@ -86,6 +86,18 @@ cargo run -- --plain
 | 1 | Custom hash table | `DefaultHasher` + modulo for bucket placement, chaining (`Vec<Vec<i32>>`) so collisions coexist instead of overwriting |
 | 2 | HashMap entry API | `entry(key).or_insert(0)` — one lookup instead of two; the first exercise with no animated trace, since std `HashMap` has no stable index to replay against |
 
+**Recursion & backtracking** — no data structure at all here, just the call stack itself:
+
+| # | Exercise | Idiom you'll hit |
+|---|----------|-------------------|
+| 1 | Recursion basics | Tracing the CALL STACK itself — depth grows on the way down, shrinks on the way back up |
+| 2 | Tail recursion | Rust doesn't guarantee tail-call optimization — the accumulator rewrite changes what's computed, not whether frames pile up |
+| 3 | Subsets | Backtracking's core idiom: push a candidate, recurse, pop it back off (undo) |
+| 4 | Combinations | Same push/recurse/pop, gated by a fixed result length instead of capturing every prefix |
+| 5 | Permutations | `used: Vec<bool>` instead of a start index — every element has to stay available at every position |
+| 6 | Permutations with duplicates | Sort first, then skip a duplicate unless its earlier twin is already placed |
+| 7 | N-Queens | `positions: Vec<usize>` instead of a 2D board — same push/recurse/pop idiom as every other backtracking exercise here |
+
 Each exercise's full write-up (complexity analysis, walkthrough, alternative implementations) is also available at [learn.sunnstech.com](https://learn.sunnstech.com) if you want the deeper version.
 
 ## While you're solving an exercise
@@ -107,18 +119,20 @@ Compared elements are marked with both color *and* a `*` glyph — never color a
 
 ## How it works
 
-algolings is organized into modules (sorting, searching, linked lists, stacks & queues, hash tables, ...), each a pair of crates:
+algolings is organized into modules (sorting, searching, linked lists, stacks & queues, hash tables, recursion & backtracking, ...), each a pair of crates:
 
 - **`algolings-trace`** — the tracing primitives (`cmp_lt`, `cmp_lt_values`, `swap`, `set_at`, `mark_sorted`, `probe`, `found`, `narrow_range`, `mark_inserted`, `mark_removed`, `mark_visited`, `mark_converging`, `mark_set`). Exercise solutions call these instead of raw `<` / `.swap()` / `==` — same behavior, but it lets algolings record what *your* solution actually did.
 - **`algolings-cli`** — the `algolings` binary: watches the current module's exercise files, runs their tests, renders the trace, and moves on to the next module once one's fully solved.
-- **`exercises/sort`**, **`exercises/search`**, **`exercises/linked-list`**, **`exercises/stacks-queues`**, **`exercises/hash-tables`** — the exercises you edit. Each one ships broken (`todo!()`).
-- **`exercises/sort-solutions`**, **`exercises/search-solutions`**, **`exercises/linked-list-solutions`**, **`exercises/stacks-queues-solutions`**, **`exercises/hash-tables-solutions`** — reference solutions, used by CI to prove every exercise is solvable, and as the source for hints and concept notes.
+- **`exercises/sort`**, **`exercises/search`**, **`exercises/linked-list`**, **`exercises/stacks-queues`**, **`exercises/hash-tables`**, **`exercises/recursion-backtracking`** — the exercises you edit. Each one ships broken (`todo!()`).
+- **`exercises/sort-solutions`**, **`exercises/search-solutions`**, **`exercises/linked-list-solutions`**, **`exercises/stacks-queues-solutions`**, **`exercises/hash-tables-solutions`**, **`exercises/recursion-backtracking-solutions`** — reference solutions, used by CI to prove every exercise is solvable, and as the source for hints and concept notes.
 
 When you save a file, algolings runs `cargo test` against it. If it passes, algolings runs a *separate* subprocess (`cargo run --bin <package>-trace`) with tracing enabled against your now-correct solution, and animates the result. Running the trace as its own subprocess — rather than linking your code into the long-running watch process — means it always reflects what you just saved, and a genuinely broken infinite loop can be killed outright instead of hanging the tool.
 
 The linked-list module's trace still uses the same array-style animation as sorting/searching: a list's values, in the order you'd walk them, shown as a growable/shrinkable row rather than literal boxes and arrows. It doesn't show pointer structure directly — the Rust code and concept notes carry that idiom instead.
 
 The hash-table module's trace is a real simplification, not just a different skin on the same idea: `custom_hash_table`'s row shows one value per BUCKET (via `mark_set`), so it can demonstrate hash-based placement but not two colliding keys coexisting in the same bucket — the tests verify chaining survives collisions regardless of what the trace can draw. `hash_entry` has no trace at all, the first exercise without one: std `HashMap` has no stable index or iteration order for a replay to point at.
+
+The recursion & backtracking module's trace doesn't show a data structure at all — `recursion_basics`/`tail_recursion` trace the CALL STACK itself (one frame per recursion depth), and `subsets`/`combinations`/`permutations`/`permutations_with_duplicates`/`n_queens` all reuse the same `Insert`/`Remove`/`Found` events for backtracking's push-candidate/recurse/pop-to-undo idiom — no new trace infrastructure was needed for this whole module.
 
 ## Project layout
 
@@ -135,12 +149,14 @@ exercises/stacks-queues/           stacks & queues exercises you edit (start bro
 exercises/stacks-queues-solutions/ stacks & queues reference solutions (used by CI + hints)
 exercises/hash-tables/             hash-table exercises you edit (start broken)
 exercises/hash-tables-solutions/   hash-table reference solutions (used by CI + hints)
+exercises/recursion-backtracking/            recursion & backtracking exercises you edit (start broken)
+exercises/recursion-backtracking-solutions/  recursion & backtracking reference solutions (used by CI + hints)
 exercises/tests-shared/            one test suite per exercise, shared by both crates in its module
 ```
 
 ## Contributing
 
-Found a bug, or want to help finish the linked-list module (Floyd's cycle detection) or port the next one (recursion & backtracking, trees, graphs, dynamic programming)? Issues and PRs welcome.
+Found a bug, or want to help finish the linked-list module (Floyd's cycle detection) or port the next one (trees, graphs, dynamic programming)? Issues and PRs welcome.
 
 To verify the whole repo (not just the exercises you're working on), use:
 

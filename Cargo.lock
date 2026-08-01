@@ -367,6 +367,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "exercises-recursion-backtracking"
+version = "0.1.0"
+dependencies = [
+ "algolings-trace",
+ "serde_json",
+]
+
+[[package]]
 name = "exercises-search"
 version = "0.1.0"
 dependencies = [
@@ -1189,6 +1197,14 @@ dependencies = [
  "time",
  "unicode-segmentation",
  "unicode-width",
+]
+
+[[package]]
+name = "recursion-backtracking-solutions"
+version = "0.1.0"
+dependencies = [
+ "algolings-trace",
+ "serde_json",
 ]
 
 [[package]]

@@ -13,6 +13,8 @@ members = [
     "exercises/stacks-queues-solutions",
     "exercises/hash-tables",
     "exercises/hash-tables-solutions",
+    "exercises/recursion-backtracking",
+    "exercises/recursion-backtracking-solutions",
 ]
 # Without this, `cargo run` from the workspace root is ambiguous across the
 # binary-producing packages (algolings, exercises-sort-trace,

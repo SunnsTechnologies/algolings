@@ -98,6 +98,13 @@ pub const MODULES: &[Module] = &[
         watch_dir: "exercises/hash-tables/src",
         exercises: HASH_TABLES_EXERCISES,
     },
+    Module {
+        name: "recursion & backtracking",
+        package: "exercises-recursion-backtracking",
+        solutions_package: "recursion-backtracking-solutions",
+        watch_dir: "exercises/recursion-backtracking/src",
+        exercises: RECURSION_BACKTRACKING_EXERCISES,
+    },
 ];
 
 pub const SORT_EXERCISES: &[Exercise] = &[
@@ -653,6 +660,166 @@ pub const HASH_TABLES_EXERCISES: &[Exercise] = &[
              `*counts.entry(value).or_insert(0) += 1;`",
         ],
         target: None,
+        starts_empty: true,
+    },
+];
+
+pub const RECURSION_BACKTRACKING_EXERCISES: &[Exercise] = &[
+    Exercise {
+        name: "recursion_basics",
+        test_filter: "recursion_basics::tests::",
+        trace_key: "recursion_basics",
+        skeleton_path: "exercises/recursion-backtracking/src/recursion_basics.rs",
+        fixture: &[],
+        concept_note: "There's no array here — the thing worth tracing is the CALL STACK \
+            itself. Each recursive call is one frame deeper; the trace's row IS the stack, \
+            growing on the way down and shrinking on the way back up. Notice fibonacci's \
+            trace: one whole branch (insert then remove at some depth) always finishes \
+            before the next branch begins at that SAME depth — that's not a coincidence, \
+            it's why nothing ever collides.",
+        hints: &[
+            "You need a private helper that carries a `depth: usize` alongside `n` — the \
+             public factorial/fibonacci just start that at 0.",
+            "Call mark_inserted(depth, n as i64) the moment a call begins, before \
+             recursing further.",
+            "Call mark_removed(depth) right before returning — after the recursive call \
+             comes back, but before you hand the result up.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "tail_recursion",
+        test_filter: "tail_recursion::tests::",
+        trace_key: "tail_recursion",
+        skeleton_path: "exercises/recursion-backtracking/src/tail_recursion.rs",
+        fixture: &[],
+        concept_note: "This LOOKS like it should need no stack at all — the accumulator \
+            carries the answer forward, so there's no work left once the recursive call \
+            returns. Watch the trace anyway: it grows to the same depth recursion_basics's \
+            factorial does. Some languages guarantee tail-call optimization collapses this \
+            into a loop; Rust doesn't. The rewrite changes WHAT gets computed at each step, \
+            not whether frames pile up.",
+        hints: &[
+            "Same call-stack tracing pattern as recursion_basics: a private helper \
+             carrying `depth`, starting at 0.",
+            "The base case returns `acc` directly — no more multiplication needed, it's \
+             already been folded in on the way down.",
+            "Recurse with `n - 1` and `n * acc` — the accumulator absorbs the \
+             multiplication BEFORE the call, not after.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "subsets",
+        test_filter: "subsets::tests::",
+        trace_key: "subsets",
+        skeleton_path: "exercises/recursion-backtracking/src/subsets.rs",
+        fixture: &[1, 2, 3],
+        concept_note: "Backtracking's whole idiom in one loop: push a candidate onto the \
+            working path, recurse, then pop it back off before trying the next one. Every \
+            state along the way — including the empty path — is a real subset, which is \
+            why found() fires on nearly every call here, not just at some final depth.",
+        hints: &[
+            "Capture `current` into `result` at the START of every call — the empty \
+             subset counts too.",
+            "mark_inserted(current.len(), value) BEFORE pushing, mark_removed(current.len() \
+             - 1) BEFORE popping — same convention as every stack push/pop in this project.",
+            "The loop starts at `index`, not 0 — that's what stops [1,2] and [2,1] from \
+             both appearing (only ever add elements AFTER where you started).",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "combinations",
+        test_filter: "combinations::tests::",
+        trace_key: "combinations",
+        skeleton_path: "exercises/recursion-backtracking/src/combinations.rs",
+        fixture: &[1, 2, 3],
+        concept_note: "Same push/recurse/pop idiom as subsets, but with a length gate: \
+            only capture `current` once it reaches exactly `k` elements, and stop \
+            exploring further from there (return immediately) instead of continuing to \
+            add more.",
+        hints: &[
+            "Check `current.len() == k` FIRST, before the loop — if it's already length \
+             k, capture and return without trying to add more.",
+            "Same tracing convention as subsets: mark_inserted before push, mark_removed \
+             before pop, found() when you capture.",
+            "The loop still starts at `start`, not 0, for the same reason as subsets — no \
+             re-visiting earlier elements.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "permutations",
+        test_filter: "permutations::tests::",
+        trace_key: "permutations",
+        skeleton_path: "exercises/recursion-backtracking/src/permutations.rs",
+        fixture: &[1, 2, 3],
+        concept_note: "Subsets and combinations only ever look FORWARD through the input \
+            (the loop starts at `index`/`start`). Permutations needs every element \
+            available at every position, in any order — so instead of a start index, track \
+            which ones are already placed with `used: Vec<bool>`, and the loop always runs \
+            0..len, skipping whatever's already used.",
+        hints: &[
+            "The loop runs `0..nums.len()` every time, not from some start index — skip \
+             indices where `used[i]` is true.",
+            "Capture once `current.len() == nums.len()`, same length-gate idiom as \
+             combinations.",
+            "Set `used[i] = true` before recursing, and back to `false` on the way out — \
+             it's part of the undo, same as popping `current`.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "permutations_with_duplicates",
+        test_filter: "permutations_with_duplicates::tests::",
+        trace_key: "permutations_with_duplicates",
+        skeleton_path: "exercises/recursion-backtracking/src/permutations_with_duplicates.rs",
+        fixture: &[1, 1, 2],
+        concept_note: "Without a duplicate check, [1, 1, 2] would produce the SAME \
+            permutation twice — once for each identical `1`, since the algorithm can't \
+            otherwise tell them apart. Sorting groups equal values together, so the fix \
+            becomes local: at each position, only ever start with the FIRST unused copy \
+            of an equal run, never a later one.",
+        hints: &[
+            "Sort `nums` first — the duplicate check only works when equal values are \
+             adjacent.",
+            "Same used[]/length-gate structure as permutations, plus one more skip \
+             condition in the loop.",
+            "Skip index i if `nums[i] == nums[i - 1] && !used[i - 1]` — that means the \
+             earlier identical value hasn't been placed yet in THIS branch, so placing \
+             the later one first would just re-derive an ordering another branch already \
+             covers.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "n_queens",
+        test_filter: "n_queens::tests::",
+        trace_key: "n_queens",
+        skeleton_path: "exercises/recursion-backtracking/src/n_queens.rs",
+        fixture: &[],
+        concept_note: "The tutorial's literal version tracks a full 2D board — this \
+            exercise simplifies that to `positions: Vec<usize>` (the column chosen for \
+            each row), since queens go one per row in order, which is exactly the \
+            push/recurse/pop idiom every other exercise in this module already uses. The \
+            conflict-tracking (`cols`/`diag1`/`diag2`) is unchanged from the original — \
+            only the STATE representation got simpler, not the algorithm.",
+        hints: &[
+            "`row` is just `positions.len()` — you don't need to pass it separately.",
+            "Only call mark_inserted/push (and later mark_removed/pop) INSIDE the \
+             \"column doesn't conflict\" branch — a row where every column conflicts \
+             should never call either, since nothing was ever placed there.",
+            "diag1 uses `row + n - col` and diag2 uses `row + col` to turn \"same \
+             diagonal\" into \"same array index\" without ever going negative.",
+        ],
+        target: Some(4),
         starts_empty: true,
     },
 ];
