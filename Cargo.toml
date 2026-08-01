@@ -11,6 +11,8 @@ members = [
     "exercises/linked-list-solutions",
     "exercises/stacks-queues",
     "exercises/stacks-queues-solutions",
+    "exercises/hash-tables",
+    "exercises/hash-tables-solutions",
 ]
 # Without this, `cargo run` from the workspace root is ambiguous across the
 # binary-producing packages (algolings, exercises-sort-trace,

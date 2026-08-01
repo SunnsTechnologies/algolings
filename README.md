@@ -79,6 +79,13 @@ cargo run -- --plain
 | 3 | Queue (VecDeque-backed) | Why `Vec::remove(0)` being O(n) is exactly the problem a ring buffer solves |
 | 4 | Queue (linked-list-backed) | `Rc<RefCell<Node>>` for a shared `tail` reference, with no `Weak` needed — nothing here ever walks backward |
 
+**Hash tables** — a genuinely different structure: position comes from a hash, not a sequence:
+
+| # | Exercise | Idiom you'll hit |
+|---|----------|-------------------|
+| 1 | Custom hash table | `DefaultHasher` + modulo for bucket placement, chaining (`Vec<Vec<i32>>`) so collisions coexist instead of overwriting |
+| 2 | HashMap entry API | `entry(key).or_insert(0)` — one lookup instead of two; the first exercise with no animated trace, since std `HashMap` has no stable index to replay against |
+
 Each exercise's full write-up (complexity analysis, walkthrough, alternative implementations) is also available at [learn.sunnstech.com](https://learn.sunnstech.com) if you want the deeper version.
 
 ## While you're solving an exercise
@@ -100,16 +107,18 @@ Compared elements are marked with both color *and* a `*` glyph — never color a
 
 ## How it works
 
-algolings is organized into modules (sorting, searching, linked lists, stacks & queues, ...), each a pair of crates:
+algolings is organized into modules (sorting, searching, linked lists, stacks & queues, hash tables, ...), each a pair of crates:
 
-- **`algolings-trace`** — the tracing primitives (`cmp_lt`, `cmp_lt_values`, `swap`, `set_at`, `mark_sorted`, `probe`, `found`, `narrow_range`, `mark_inserted`, `mark_removed`, `mark_visited`, `mark_converging`). Exercise solutions call these instead of raw `<` / `.swap()` / `==` — same behavior, but it lets algolings record what *your* solution actually did.
+- **`algolings-trace`** — the tracing primitives (`cmp_lt`, `cmp_lt_values`, `swap`, `set_at`, `mark_sorted`, `probe`, `found`, `narrow_range`, `mark_inserted`, `mark_removed`, `mark_visited`, `mark_converging`, `mark_set`). Exercise solutions call these instead of raw `<` / `.swap()` / `==` — same behavior, but it lets algolings record what *your* solution actually did.
 - **`algolings-cli`** — the `algolings` binary: watches the current module's exercise files, runs their tests, renders the trace, and moves on to the next module once one's fully solved.
-- **`exercises/sort`**, **`exercises/search`**, **`exercises/linked-list`**, **`exercises/stacks-queues`** — the exercises you edit. Each one ships broken (`todo!()`).
-- **`exercises/sort-solutions`**, **`exercises/search-solutions`**, **`exercises/linked-list-solutions`**, **`exercises/stacks-queues-solutions`** — reference solutions, used by CI to prove every exercise is solvable, and as the source for hints and concept notes.
+- **`exercises/sort`**, **`exercises/search`**, **`exercises/linked-list`**, **`exercises/stacks-queues`**, **`exercises/hash-tables`** — the exercises you edit. Each one ships broken (`todo!()`).
+- **`exercises/sort-solutions`**, **`exercises/search-solutions`**, **`exercises/linked-list-solutions`**, **`exercises/stacks-queues-solutions`**, **`exercises/hash-tables-solutions`** — reference solutions, used by CI to prove every exercise is solvable, and as the source for hints and concept notes.
 
 When you save a file, algolings runs `cargo test` against it. If it passes, algolings runs a *separate* subprocess (`cargo run --bin <package>-trace`) with tracing enabled against your now-correct solution, and animates the result. Running the trace as its own subprocess — rather than linking your code into the long-running watch process — means it always reflects what you just saved, and a genuinely broken infinite loop can be killed outright instead of hanging the tool.
 
 The linked-list module's trace still uses the same array-style animation as sorting/searching: a list's values, in the order you'd walk them, shown as a growable/shrinkable row rather than literal boxes and arrows. It doesn't show pointer structure directly — the Rust code and concept notes carry that idiom instead.
+
+The hash-table module's trace is a real simplification, not just a different skin on the same idea: `custom_hash_table`'s row shows one value per BUCKET (via `mark_set`), so it can demonstrate hash-based placement but not two colliding keys coexisting in the same bucket — the tests verify chaining survives collisions regardless of what the trace can draw. `hash_entry` has no trace at all, the first exercise without one: std `HashMap` has no stable index or iteration order for a replay to point at.
 
 ## Project layout
 
@@ -124,12 +133,14 @@ exercises/linked-list/             linked-list exercises you edit (start broken)
 exercises/linked-list-solutions/   linked-list reference solutions (used by CI + hints)
 exercises/stacks-queues/           stacks & queues exercises you edit (start broken)
 exercises/stacks-queues-solutions/ stacks & queues reference solutions (used by CI + hints)
+exercises/hash-tables/             hash-table exercises you edit (start broken)
+exercises/hash-tables-solutions/   hash-table reference solutions (used by CI + hints)
 exercises/tests-shared/            one test suite per exercise, shared by both crates in its module
 ```
 
 ## Contributing
 
-Found a bug, or want to help finish the linked-list module (Floyd's cycle detection) or port the next one (hash tables, recursion & backtracking, trees, graphs, dynamic programming)? Issues and PRs welcome.
+Found a bug, or want to help finish the linked-list module (Floyd's cycle detection) or port the next one (recursion & backtracking, trees, graphs, dynamic programming)? Issues and PRs welcome.
 
 To verify the whole repo (not just the exercises you're working on), use:
 

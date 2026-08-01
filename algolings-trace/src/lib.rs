@@ -170,6 +170,18 @@ pub fn mark_converging(left: usize, right: usize) {
     record(Event::Converge { left, right });
 }
 
+/// Records that position `i` was overwritten with `value`. Record-only,
+/// same reasoning as [`mark_inserted`]/[`mark_removed`] — for callers
+/// whose storage isn't a literal `&mut [T]` (so [`set_at`] doesn't apply),
+/// e.g. a hash table writing into one of its buckets rather than a slice
+/// index.
+pub fn mark_set<T: Copy + Into<i64>>(i: usize, value: T) {
+    record(Event::Set {
+        i,
+        value: value.into(),
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -283,6 +295,21 @@ mod tests {
     fn disabled_mark_converging_records_nothing() {
         disable();
         mark_converging(1, 3);
+        assert!(take_events().is_empty());
+    }
+
+    #[test]
+    fn mark_set_records_a_set_event() {
+        enable();
+        mark_set(2, 42i32);
+        assert_eq!(take_events(), vec![Event::Set { i: 2, value: 42 }]);
+        disable();
+    }
+
+    #[test]
+    fn disabled_mark_set_records_nothing() {
+        disable();
+        mark_set(2, 42i32);
         assert!(take_events().is_empty());
     }
 }

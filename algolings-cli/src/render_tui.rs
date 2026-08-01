@@ -84,6 +84,15 @@ pub fn run_interactive(
     use crossterm::event::{self, Event as CEvent, KeyCode};
     use std::time::Duration;
 
+    // An exercise with no trace events (e.g. one that never calls any
+    // algolings_trace helper) has nothing to step through — entering the
+    // keypress loop below would draw one static frame and then block
+    // waiting for `q`, a confusing dead end. Skip the player entirely
+    // rather than making a learner dismiss a screen that can't advance.
+    if events.is_empty() {
+        return Ok(());
+    }
+
     let mut terminal = ratatui::init();
     let mut player = TracePlayer::new(fixture, events);
     let mut auto_play = false;

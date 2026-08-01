@@ -1,0 +1,13 @@
+[package]
+name = "hash-tables-solutions"
+version = "0.1.0"
+edition = "2024"
+license.workspace = true
+
+[[bin]]
+name = "hash-tables-solutions-trace"
+path = "src/bin/trace.rs"
+
+[dependencies]
+algolings-trace = { path = "../../algolings-trace" }
+serde_json = "1.0.151"

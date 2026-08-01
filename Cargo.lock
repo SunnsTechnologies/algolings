@@ -351,6 +351,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "exercises-hash-tables"
+version = "0.1.0"
+dependencies = [
+ "algolings-trace",
+ "serde_json",
+]
+
+[[package]]
 name = "exercises-linked-list"
 version = "0.1.0"
 dependencies = [
@@ -503,6 +511,14 @@ dependencies = [
  "cfg-if",
  "libc",
  "r-efi 6.0.0",
+]
+
+[[package]]
+name = "hash-tables-solutions"
+version = "0.1.0"
+dependencies = [
+ "algolings-trace",
+ "serde_json",
 ]
 
 [[package]]

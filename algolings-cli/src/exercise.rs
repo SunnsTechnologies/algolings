@@ -91,6 +91,13 @@ pub const MODULES: &[Module] = &[
         watch_dir: "exercises/stacks-queues/src",
         exercises: STACKS_QUEUES_EXERCISES,
     },
+    Module {
+        name: "hash tables",
+        package: "exercises-hash-tables",
+        solutions_package: "hash-tables-solutions",
+        watch_dir: "exercises/hash-tables/src",
+        exercises: HASH_TABLES_EXERCISES,
+    },
 ];
 
 pub const SORT_EXERCISES: &[Exercise] = &[
@@ -590,6 +597,60 @@ pub const STACKS_QUEUES_EXERCISES: &[Exercise] = &[
              node nothing points to anymore.",
             "At len() == 1, head and tail are the SAME Rc<RefCell<Node>> — never \
              hold a borrow() and borrow_mut() on both fields at once, or it panics.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+];
+
+pub const HASH_TABLES_EXERCISES: &[Exercise] = &[
+    Exercise {
+        name: "custom_hash_table",
+        test_filter: "custom_hash_table::tests::",
+        trace_key: "custom_hash_table",
+        skeleton_path: "exercises/hash-tables/src/custom_hash_table.rs",
+        fixture: &[0, 0, 0, 0, 0, 0, 0, 0],
+        concept_note: "Every other exercise in this project traces a VALUE SEQUENCE — a \
+            row you can point at and say \"this is what's stored, in this order.\" A hash \
+            table isn't that: `bucket_index` scatters keys across a fixed set of slots \
+            based on a hash, not insertion order. The trace here shows which bucket a key \
+            landed in — but since it can only show one value per slot, two keys colliding \
+            into the same bucket will show the most RECENT one, not both. That's a \
+            limitation of the visualization, not of your implementation: the tests fully \
+            verify that chaining keeps every colliding key findable, regardless of what \
+            the trace can draw.",
+        hints: &[
+            "bucket_index: hash the key with DefaultHasher, then reduce it to a valid \
+             position with `% self.buckets.len()` — the same hash-then-modulo idiom \
+             every hash table variant uses under the hood.",
+            "insert is a SET operation, not a growing list — check whether the key's \
+             bucket already contains it before pushing, or you'll store duplicates.",
+            "remove's trace shows 0 if the bucket is now empty, or one of the keys \
+             still chained there if others survive — call mark_set(index, ...) either \
+             way, after mutating the bucket.",
+        ],
+        target: None,
+        starts_empty: false,
+    },
+    Exercise {
+        name: "hash_entry",
+        test_filter: "hash_entry::tests::",
+        trace_key: "hash_entry",
+        skeleton_path: "exercises/hash-tables/src/hash_entry.rs",
+        fixture: &[],
+        concept_note: "This is the first exercise in algolings with no animated trace — \
+            std HashMap has no stable iteration order or index to point a replay at, \
+            unlike every array/list/bucket-array model every other exercise traces \
+            against. The idiom worth learning here isn't visual: `entry(key).or_insert(0)` \
+            looks up the key ONCE and hands you a `&mut` either way, instead of the \
+            naive `contains_key` + `get_mut`/`insert` pattern hashing the same key twice.",
+        hints: &[
+            "Start from an empty HashMap::new().",
+            "For each value, call `counts.entry(value).or_insert(0)` — this returns a \
+             `&mut usize`, a fresh 0 if the key wasn't there yet, or the existing count \
+             if it was.",
+            "Dereference and add 1 to whatever `entry(...).or_insert(0)` returns: \
+             `*counts.entry(value).or_insert(0) += 1;`",
         ],
         target: None,
         starts_empty: true,
