@@ -98,6 +98,19 @@ cargo run -- --plain
 | 6 | Permutations with duplicates | Sort first, then skip a duplicate unless its earlier twin is already placed |
 | 7 | N-Queens | `positions: Vec<usize>` instead of a 2D board — same push/recurse/pop idiom as every other backtracking exercise here |
 
+**Trees** — the largest module yet, from a plain BST up through both major kinds of self-balancing tree:
+
+| # | Exercise | Idiom you'll hit |
+|---|----------|-------------------|
+| 1 | Binary search tree | Depth-as-position, the same call-stack idiom recursion_basics used, now walking a tree instead of a flat call stack |
+| 2 | BST deletion | Deleting a two-children node without losing track of an unrelated sibling at the same depth |
+| 3 | Tree traversals | Same append-tracing idiom as linked-list Insert — inorder/preorder/postorder/level_order differ only in WHERE the visit happens |
+| 4 | Heap (min-heap) | A "tree" that's really just a flat `Vec` and index arithmetic — reuses sorting's `cmp_lt`/`swap` unchanged |
+| 5 | Self-balancing BST (AVL) — insert | Height tracking and the four rotation cases (LL/RR/LR/RL); ships without an animated trace, since a rotation restructures multiple nodes at once |
+| 6 | Self-balancing BST (AVL) — delete | The same four cases, but genuinely different trigger conditions than insertion's |
+| 7 | Red-black tree — insert | A left-leaning red-black tree (LLRB): three ordered checks (right-leaning red, two left reds, a 4-node split) replace AVL's four |
+| 8 | Red-black tree — delete | Borrowing a red link before descending into a black node, so deletion never breaks the tree's black-height invariant |
+
 Each exercise's full write-up (complexity analysis, walkthrough, alternative implementations) is also available at [learn.sunnstech.com](https://learn.sunnstech.com) if you want the deeper version.
 
 ## While you're solving an exercise
@@ -119,12 +132,12 @@ Compared elements are marked with both color *and* a `*` glyph — never color a
 
 ## How it works
 
-algolings is organized into modules (sorting, searching, linked lists, stacks & queues, hash tables, recursion & backtracking, ...), each a pair of crates:
+algolings is organized into modules (sorting, searching, linked lists, stacks & queues, hash tables, recursion & backtracking, trees, ...), each a pair of crates:
 
 - **`algolings-trace`** — the tracing primitives (`cmp_lt`, `cmp_lt_values`, `swap`, `set_at`, `mark_sorted`, `probe`, `found`, `narrow_range`, `mark_inserted`, `mark_removed`, `mark_visited`, `mark_converging`, `mark_set`). Exercise solutions call these instead of raw `<` / `.swap()` / `==` — same behavior, but it lets algolings record what *your* solution actually did.
 - **`algolings-cli`** — the `algolings` binary: watches the current module's exercise files, runs their tests, renders the trace, and moves on to the next module once one's fully solved.
-- **`exercises/sort`**, **`exercises/search`**, **`exercises/linked-list`**, **`exercises/stacks-queues`**, **`exercises/hash-tables`**, **`exercises/recursion-backtracking`** — the exercises you edit. Each one ships broken (`todo!()`).
-- **`exercises/sort-solutions`**, **`exercises/search-solutions`**, **`exercises/linked-list-solutions`**, **`exercises/stacks-queues-solutions`**, **`exercises/hash-tables-solutions`**, **`exercises/recursion-backtracking-solutions`** — reference solutions, used by CI to prove every exercise is solvable, and as the source for hints and concept notes.
+- **`exercises/sort`**, **`exercises/search`**, **`exercises/linked-list`**, **`exercises/stacks-queues`**, **`exercises/hash-tables`**, **`exercises/recursion-backtracking`**, **`exercises/trees`** — the exercises you edit. Each one ships broken (`todo!()`).
+- **`exercises/sort-solutions`**, **`exercises/search-solutions`**, **`exercises/linked-list-solutions`**, **`exercises/stacks-queues-solutions`**, **`exercises/hash-tables-solutions`**, **`exercises/recursion-backtracking-solutions`**, **`exercises/trees-solutions`** — reference solutions, used by CI to prove every exercise is solvable, and as the source for hints and concept notes.
 
 When you save a file, algolings runs `cargo test` against it. If it passes, algolings runs a *separate* subprocess (`cargo run --bin <package>-trace`) with tracing enabled against your now-correct solution, and animates the result. Running the trace as its own subprocess — rather than linking your code into the long-running watch process — means it always reflects what you just saved, and a genuinely broken infinite loop can be killed outright instead of hanging the tool.
 
@@ -133,6 +146,8 @@ The linked-list module's trace still uses the same array-style animation as sort
 The hash-table module's trace is a real simplification, not just a different skin on the same idea: `custom_hash_table`'s row shows one value per BUCKET (via `mark_set`), so it can demonstrate hash-based placement but not two colliding keys coexisting in the same bucket — the tests verify chaining survives collisions regardless of what the trace can draw. `hash_entry` has no trace at all, the first exercise without one: std `HashMap` has no stable index or iteration order for a replay to point at.
 
 The recursion & backtracking module's trace doesn't show a data structure at all — `recursion_basics`/`tail_recursion` trace the CALL STACK itself (one frame per recursion depth), and `subsets`/`combinations`/`permutations`/`permutations_with_duplicates`/`n_queens` all reuse the same `Insert`/`Remove`/`Found` events for backtracking's push-candidate/recurse/pop-to-undo idiom — no new trace infrastructure was needed for this whole module.
+
+The trees module reuses more than it invents. `binary_search_tree`/`bst_deletion` extend recursion_basics's call-stack idiom to a tree descent (depth stands in for position); `tree_traversals` reuses linked-list Insert's append-tracing idiom; `heap` reuses sorting's `cmp_lt`/`swap` completely unchanged, since a heap really is just a flat `Vec` under the hood. The two self-balancing exercise pairs (AVL and red-black) ship with no animated trace at all — a rotation or color flip restructures several nodes' pointers (and, for red-black, colors) simultaneously, which no existing trace event can represent faithfully. Their rotation/color-flip mechanics are given to you fully implemented; the lesson in each is the case-decision logic that decides when to call them.
 
 ## Project layout
 
@@ -151,12 +166,14 @@ exercises/hash-tables/             hash-table exercises you edit (start broken)
 exercises/hash-tables-solutions/   hash-table reference solutions (used by CI + hints)
 exercises/recursion-backtracking/            recursion & backtracking exercises you edit (start broken)
 exercises/recursion-backtracking-solutions/  recursion & backtracking reference solutions (used by CI + hints)
+exercises/trees/                   trees exercises you edit (start broken)
+exercises/trees-solutions/         trees reference solutions (used by CI + hints)
 exercises/tests-shared/            one test suite per exercise, shared by both crates in its module
 ```
 
 ## Contributing
 
-Found a bug, or want to help finish the linked-list module (Floyd's cycle detection) or port the next one (trees, graphs, dynamic programming)? Issues and PRs welcome.
+Found a bug, or want to help finish the linked-list module (Floyd's cycle detection) or port the next one (graphs, dynamic programming)? Issues and PRs welcome.
 
 To verify the whole repo (not just the exercises you're working on), use:
 

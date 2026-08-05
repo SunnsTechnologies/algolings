@@ -105,6 +105,13 @@ pub const MODULES: &[Module] = &[
         watch_dir: "exercises/recursion-backtracking/src",
         exercises: RECURSION_BACKTRACKING_EXERCISES,
     },
+    Module {
+        name: "trees",
+        package: "exercises-trees",
+        solutions_package: "trees-solutions",
+        watch_dir: "exercises/trees/src",
+        exercises: TREES_EXERCISES,
+    },
 ];
 
 pub const SORT_EXERCISES: &[Exercise] = &[
@@ -820,6 +827,209 @@ pub const RECURSION_BACKTRACKING_EXERCISES: &[Exercise] = &[
              diagonal\" into \"same array index\" without ever going negative.",
         ],
         target: Some(4),
+        starts_empty: true,
+    },
+];
+
+pub const TREES_EXERCISES: &[Exercise] = &[
+    Exercise {
+        name: "binary_search_tree",
+        test_filter: "binary_search_tree::tests::",
+        trace_key: "binary_search_tree",
+        skeleton_path: "exercises/trees/src/binary_search_tree.rs",
+        fixture: &[5, 3, 8, 1, 4, 7, 9],
+        concept_note: "Notice the trace position is DEPTH, not an array index — the same \
+            call-stack-as-position idiom recursion_basics used for factorial/fibonacci, \
+            extended to a tree descent. It's safe here for the same reason: a single \
+            insert or contains call only ever walks ONE path from the root, so no two \
+            probes in this trace can ever collide on the same depth.",
+        hints: &[
+            "Write private helpers that carry a `depth: usize` alongside the node, same \
+             pattern as recursion_basics — the public insert/contains just start it at 0.",
+            "Call mark_visited(depth) every time you step into a Some(node), before \
+             comparing against its value.",
+            "insert: call mark_inserted(depth, value) at the None case where you place \
+             the new node. contains: call found(depth) right before returning true on a \
+             match.",
+        ],
+        target: Some(4),
+        starts_empty: true,
+    },
+    Exercise {
+        name: "bst_deletion",
+        test_filter: "bst_deletion::tests::",
+        trace_key: "bst_deletion",
+        skeleton_path: "exercises/trees/src/bst_deletion.rs",
+        fixture: &[10, 5, 7, 3],
+        concept_note: "Watch the depth counter through the two-children case: it does NOT \
+            restart at 0 for the in-order-successor search — it keeps counting up from the \
+            target's own depth. Restarting would let an unrelated sibling at that same \
+            depth collide with the successor in the trace. The Set event you see at the \
+            end is the target's OWN position changing value, not a swap.",
+        hints: &[
+            "Leaf and one-child cases: mark_visited(depth) on the way down, then \
+             mark_removed(depth) where the node is actually dropped or replaced by its \
+             one child.",
+            "Two-children case: find the in-order successor (the minimum of the right \
+             subtree) using a helper that keeps incrementing depth from depth + 1 — never \
+             restart it at 0.",
+            "Once you have the successor's value, call mark_set(depth, successor_value) \
+             at the TARGET's original depth, copy the value into the target node, then \
+             remove the successor's own (now-duplicate) leaf with mark_removed at its \
+             depth.",
+        ],
+        target: Some(5),
+        starts_empty: false,
+    },
+    Exercise {
+        name: "tree_traversals",
+        test_filter: "tree_traversals::tests::",
+        trace_key: "tree_traversals",
+        skeleton_path: "exercises/trees/src/tree_traversals.rs",
+        fixture: &[5, 3, 8, 1, 4, 7, 9],
+        concept_note: "Same append-tracing idiom insert.rs (linked lists) already taught \
+            you: mark_inserted(result.len(), value) right where a value gets pushed. The \
+            trace you're watching is inorder specifically, but all four traversals \
+            (inorder/preorder/postorder/level_order) use this exact same idiom — only the \
+            ORDER they visit nodes in differs.",
+        hints: &[
+            "inorder/preorder/postorder are recursive: the only difference between them \
+             is WHERE the mark_inserted(result.len(), value)/result.push(value) pair sits \
+             relative to the two recursive calls on left and right.",
+            "level_order is iterative, not recursive — use a VecDeque as a queue, pushing \
+             children onto the back as you pop and visit each node from the front.",
+            "inorder: left, then visit, then right. preorder: visit, then left, then \
+             right. postorder: left, then right, then visit.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "heap",
+        test_filter: "heap::tests::",
+        trace_key: "heap",
+        skeleton_path: "exercises/trees/src/heap.rs",
+        fixture: &[1, 3, 2, 0],
+        concept_note: "No new trace events here at all — a heap is stored as a flat Vec, \
+            so it reuses cmp_lt/swap exactly as written, the same helpers bubble_sort/ \
+            selection_sort/insertion_sort already called. A heap is a genuinely flat value \
+            sequence under the hood; the tree picture is just how humans like to draw it.",
+        hints: &[
+            "A node at index i has parent (i - 1) / 2, and children 2i + 1 / 2i + 2 — \
+             that arithmetic is the entire structure, there's no pointer-based tree here.",
+            "insert: push the value onto the end, then bubble it UP — swap with its \
+             parent while it's smaller, using cmp_lt(&self.data, index, parent).",
+            "extract_min: pop the last element, swap it into index 0 (replacing the old \
+             minimum), then bubble it DOWN — repeatedly swap with whichever child is \
+             smaller, until neither child is smaller than it.",
+        ],
+        target: None,
+        starts_empty: false,
+    },
+    Exercise {
+        name: "self_balancing_bst",
+        test_filter: "self_balancing_bst::tests::",
+        trace_key: "self_balancing_bst",
+        skeleton_path: "exercises/trees/src/self_balancing_bst.rs",
+        fixture: &[],
+        concept_note: "No animated trace for this one — unlike a stack push or a single \
+            node swap, a rotation restructures several nodes' pointers AND their heights \
+            at once, and no existing trace event (or reasonable approximation) can \
+            represent that faithfully. rotate_left/rotate_right/height tracking are given \
+            to you fully implemented in avl.rs; the lesson is knowing which of the four \
+            cases (LL/RR/LR/RL) applies after each insert.",
+        hints: &[
+            "Insert like a normal BST first (recursively), then on the way back up: call \
+             update_height(), then check balance_factor() at the current node.",
+            "Compare the balance factor's SIGN against whether the inserted value went \
+             left or right of that node's own left/right child, to tell an LL/RR case \
+             apart from an LR/RL case.",
+            "LL: balance_factor() > 1 and value < left child's value → rotate_right. RR: \
+             mirror image → rotate_left. LR/RL: rotate the CHILD first, then rotate the \
+             node itself — both given as AvlNode::rotate_left/rotate_right.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "self_balancing_bst_delete",
+        test_filter: "self_balancing_bst_delete::tests::",
+        trace_key: "self_balancing_bst_delete",
+        skeleton_path: "exercises/trees/src/self_balancing_bst_delete.rs",
+        fixture: &[],
+        concept_note: "Same BST-delete cases as bst_deletion (leaf, one child, two \
+            children via in-order successor), but rebalancing has to happen on the way \
+            back up, same as self_balancing_bst's insert. The four conditions are \
+            genuinely different from insertion's, though: deletion can require a rotation \
+            even when the relevant child's OWN balance factor is already 0, which \
+            insertion never triggers — so don't just copy insertion's four checks over \
+            unchanged.",
+        hints: &[
+            "BST delete first: leaf returns None, one child returns that child, two \
+             children replace the value with the in-order successor and delete the \
+             successor from the right subtree.",
+            "Call update_height() and check balance_factor() at EVERY level on the way \
+             back up, not just where the node was actually removed — the imbalance can \
+             surface several levels above the deletion.",
+            "LL: balance_factor() > 1 and the left child's OWN balance_factor() >= 0 \
+             (not strictly > 0, unlike insertion) → rotate_right, and the mirror for RR \
+             uses <= 0. Otherwise it's the two-step LR/RL case, same as insertion.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "red_black_tree",
+        test_filter: "red_black_tree::tests::",
+        trace_key: "red_black_tree",
+        skeleton_path: "exercises/trees/src/red_black_tree.rs",
+        fixture: &[],
+        concept_note: "Untraced, same reasoning as self_balancing_bst — a rotation or \
+            color flip restructures/recolors multiple nodes at once. This is a \
+            left-leaning red-black tree (LLRB): red links only ever lean left, which \
+            collapses the textbook's twelve-ish insertion cases down to three checks, \
+            run in order, after every recursive insert call returns.",
+        hints: &[
+            "New nodes are always red (RbNode::new already does this) — insert like a \
+             normal BST, then fix the shape on the way back up, in this exact order.",
+            "1) Right-leaning red: right child red, left child not → rotate_left. 2) Two \
+             consecutive left reds: left child red AND left child's left child red → \
+             rotate_right.",
+            "3) Both children red (a 4-node): flip_colors — this one can fire right after \
+             case 2 resolves it, so check it unconditionally, not as an else-branch. All \
+             three helpers (is_red/rotate_left/rotate_right/flip_colors) are given in rb.rs.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "red_black_tree_delete",
+        test_filter: "red_black_tree_delete::tests::",
+        trace_key: "red_black_tree_delete",
+        skeleton_path: "exercises/trees/src/red_black_tree_delete.rs",
+        fixture: &[],
+        concept_note: "Untraced, same reasoning as red_black_tree. The hard part isn't \
+            the BST-shape delete cases (same three as bst_deletion) — it's that you can \
+            only safely delete THROUGH a red link. Before descending into a child that's \
+            about to become a black 2-node, you have to borrow a red link from its \
+            sibling first, using the given move_red_left/move_red_right — or the deletion \
+            can lose a black link along that path and break the tree's black-height \
+            invariant.",
+        hints: &[
+            "Guard against deleting a value that isn't in the tree FIRST (use \
+             tree_contains) — move_red_left/move_red_right assume the search path they're \
+             on actually continues, and will panic on a value that was never there.",
+            "Descending left: if the left child and ITS left child are both black, call \
+             move_red_left before recursing left. Descending right (or when the target \
+             equals the current node and needs its right subtree): the mirror image with \
+             move_red_right.",
+            "Prime the root to Red before the very first recursive call if both its \
+             children are black, and force it back to Black afterward — otherwise the \
+             very first move_red_left/move_red_right has no red link to borrow from. Call \
+             RbNode::fix_up (given) on the way back up at every level, same three checks \
+             red_black_tree.rs's insert used.",
+        ],
+        target: Some(20),
         starts_empty: true,
     },
 ];
