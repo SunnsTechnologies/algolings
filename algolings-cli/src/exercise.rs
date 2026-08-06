@@ -119,6 +119,13 @@ pub const MODULES: &[Module] = &[
         watch_dir: "exercises/graphs/src",
         exercises: GRAPHS_EXERCISES,
     },
+    Module {
+        name: "dynamic programming",
+        package: "exercises-dynamic-programming",
+        solutions_package: "dynamic-programming-solutions",
+        watch_dir: "exercises/dynamic-programming/src",
+        exercises: DYNAMIC_PROGRAMMING_EXERCISES,
+    },
 ];
 
 pub const SORT_EXERCISES: &[Exercise] = &[
@@ -1145,6 +1152,87 @@ pub const GRAPHS_EXERCISES: &[Exercise] = &[
         ],
         target: None,
         starts_empty: true,
+    },
+];
+
+pub const DYNAMIC_PROGRAMMING_EXERCISES: &[Exercise] = &[
+    Exercise {
+        name: "climbing_stairs",
+        test_filter: "climbing_stairs::tests::",
+        trace_key: "climbing_stairs",
+        skeleton_path: "exercises/dynamic-programming/src/climbing_stairs.rs",
+        // A fixed-size, zeroed starting picture — six positions for
+        // n=5 (target) — filled in by Set as the dp table builds,
+        // exactly like counting_sort/radix_sort's output array.
+        // fixture.len() must always be target + 1.
+        fixture: &[0, 0, 0, 0, 0, 0],
+        concept_note: "Same recurrence as Fibonacci (dp[i] = dp[i-1] + dp[i-2]) — the idiom \
+            here isn't the math, it's BOTTOM-UP TABULATION: build every smaller answer first, \
+            in order, so nothing ever gets recomputed. Notice this reuses mark_set exactly like \
+            counting_sort/radix_sort already do for a value landing in a fixed-size output \
+            array — no new trace event needed for the whole DP module.",
+        hints: &[
+            "dp[i] is the number of ways to reach step i. There's exactly one way to reach \
+             step 0 (don't move) and step 1 (one single step) — those are your base cases.",
+            "For every step after that, you either arrived via a 1-step move from i-1, or a \
+             2-step move from i-2 — so dp[i] = dp[i-1] + dp[i-2].",
+            "Call mark_set(i, dp[i] as i32) every time you fill a position — including \
+             dp[0] and dp[1], not just inside the loop.",
+        ],
+        target: Some(5),
+        starts_empty: false,
+    },
+    Exercise {
+        name: "house_robber",
+        test_filter: "house_robber::tests::",
+        trace_key: "house_robber",
+        skeleton_path: "exercises/dynamic-programming/src/house_robber.rs",
+        // Unlike every other DP fixture, this IS the actual input — rob()
+        // takes nums directly, so fixture doubles as both the display
+        // picture and the function argument.
+        fixture: &[2, 7, 9, 3, 1],
+        concept_note: "A genuinely different recurrence from climbing_stairs' plain sum — this \
+            one is a DECISION at every step: dp[i] = dp[i-1].max(dp[i-2] + nums[i]), either skip \
+            house i and keep whatever you already had, or rob it and add to what you had two \
+            houses back (never one, since adjacent houses can't both be hit). Same mark_set \
+            idiom as climbing_stairs either way.",
+        hints: &[
+            "dp[i] is the most you can rob from houses 0..=i. Base cases: dp[0] = nums[0], \
+             dp[1] = nums[0].max(nums[1]) — you can only take one of the first two.",
+            "At each house after that, you're choosing between two options: don't rob it \
+             (dp[i-1]) or rob it (dp[i-2] + nums[i]) — take whichever is bigger.",
+            "Call mark_set(i, dp[i]) every time you fill a position, including dp[0] and \
+             dp[1] before the loop starts.",
+        ],
+        target: None,
+        starts_empty: false,
+    },
+    Exercise {
+        name: "grid_paths",
+        test_filter: "grid_paths::tests::",
+        trace_key: "grid_paths",
+        skeleton_path: "exercises/dynamic-programming/src/grid_paths.rs",
+        // A 3x3 grid, flattened row-major into 9 zeroed positions.
+        // fixture.len() must always be a multiple of target (cols);
+        // rows is derived as fixture.len() / target in the dispatcher.
+        fixture: &[0, 0, 0, 0, 0, 0, 0, 0, 0],
+        concept_note: "The first genuinely 2D DP table in this curriculum, flattened row-major \
+            into a single trace position (row * cols + col) since this project's trace events \
+            only understand a flat array. The first row and first column are both base cases — \
+            trace row 0 in FULL first (that includes the top-left corner), then column 0 \
+            starting from row 1, not row 0, or the corner cell gets marked twice.",
+        hints: &[
+            "dp[row][col] is the number of paths to reach that cell. The entire first row \
+             and first column are base case 1 — moving only right or only down, there's \
+             exactly one way to get there.",
+            "For every other cell, dp[row][col] = dp[row-1][col] + dp[row][col-1] — the paths \
+             to reach it either came from above or from the left.",
+            "mark_set(row * cols + col, value) for every cell. Trace the ENTIRE first row \
+             (including the corner), then the first column starting at row 1 — starting \
+             column 0's loop at row 0 instead would mark_set the corner twice.",
+        ],
+        target: Some(3),
+        starts_empty: false,
     },
 ];
 

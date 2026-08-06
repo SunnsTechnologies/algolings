@@ -19,6 +19,8 @@ members = [
     "exercises/trees-solutions",
     "exercises/graphs",
     "exercises/graphs-solutions",
+    "exercises/dynamic-programming",
+    "exercises/dynamic-programming-solutions",
 ]
 # Without this, `cargo run` from the workspace root is ambiguous across the
 # binary-producing packages (algolings, exercises-sort-trace,

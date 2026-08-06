@@ -320,6 +320,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "dynamic-programming-solutions"
+version = "0.1.0"
+dependencies = [
+ "algolings-trace",
+ "serde_json",
+]
+
+[[package]]
 name = "either"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -348,6 +356,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1a05365e3b1c6d1650318537c7460c6923f1abdd272ad6842baa2b509957a06"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "exercises-dynamic-programming"
+version = "0.1.0"
+dependencies = [
+ "algolings-trace",
+ "serde_json",
 ]
 
 [[package]]
