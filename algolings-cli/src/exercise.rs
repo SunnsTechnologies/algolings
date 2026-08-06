@@ -112,6 +112,13 @@ pub const MODULES: &[Module] = &[
         watch_dir: "exercises/trees/src",
         exercises: TREES_EXERCISES,
     },
+    Module {
+        name: "graphs",
+        package: "exercises-graphs",
+        solutions_package: "graphs-solutions",
+        watch_dir: "exercises/graphs/src",
+        exercises: GRAPHS_EXERCISES,
+    },
 ];
 
 pub const SORT_EXERCISES: &[Exercise] = &[
@@ -1030,6 +1037,113 @@ pub const TREES_EXERCISES: &[Exercise] = &[
              red_black_tree.rs's insert used.",
         ],
         target: Some(20),
+        starts_empty: true,
+    },
+];
+
+pub const GRAPHS_EXERCISES: &[Exercise] = &[
+    Exercise {
+        name: "bfs",
+        test_filter: "bfs::tests::",
+        trace_key: "bfs",
+        skeleton_path: "exercises/graphs/src/bfs.rs",
+        // A flattened edge list, not a value sequence: consecutive
+        // (from, to) pairs describing a small diamond — 1 connects to 2
+        // and 3, both of which connect to 4.
+        fixture: &[1, 2, 1, 3, 2, 4, 3, 4],
+        concept_note: "Notice the trace position is VISIT ORDER, not a tree depth or a call- \
+            stack frame — the same append-tracing idiom tree_traversals used for inorder/ \
+            preorder/postorder/level_order, just walking a graph's queue instead of a tree's \
+            recursion. A HashSet, not an array, is what keeps BFS from ever revisiting a node \
+            it's already seen.",
+        hints: &[
+            "Track visited nodes in a HashSet, and the frontier to explore in a VecDeque — \
+             push_back to enqueue, pop_front to dequeue, that's what makes it breadth-FIRST.",
+            "The moment you pop a node off the queue, call mark_inserted(order.len(), node) \
+             right before pushing it into `order` — visit order IS trace position here, no \
+             separate counter needed.",
+            "When you look at a popped node's neighbors, mark each unvisited one visited \
+             AND push it onto the queue in the SAME step — marking it only when it's dequeued \
+             later would let it get enqueued twice.",
+        ],
+        target: Some(1),
+        starts_empty: true,
+    },
+    Exercise {
+        name: "dfs",
+        test_filter: "dfs::tests::",
+        trace_key: "dfs",
+        skeleton_path: "exercises/graphs/src/dfs.rs",
+        fixture: &[1, 2, 1, 3, 2, 4, 3, 4],
+        concept_note: "Same fixture as bfs, same append-tracing idiom (mark_inserted(order.len(), \
+            node)) — but watch the visit order diverge: DFS commits to one branch and follows \
+            it all the way down before ever trying the next one, where BFS explores everything \
+            one step away before going any further. Same graph, same starting point, genuinely \
+            different order.",
+        hints: &[
+            "Write a private recursive helper that carries `visited`/`order` alongside the \
+             current node — the public dfs() just kicks it off from `start`.",
+            "Call mark_inserted(order.len(), node) the moment you enter a node (mark it \
+             visited and push it into `order`), before you look at any of its neighbors.",
+            "Loop over the current node's neighbors — for each unvisited one, recurse into \
+             it immediately, don't just queue it up. That immediate recursion is what makes \
+             this depth-FIRST instead of breadth-first.",
+        ],
+        target: Some(1),
+        starts_empty: true,
+    },
+    Exercise {
+        name: "cycle_detection",
+        test_filter: "cycle_detection::tests::",
+        trace_key: "cycle_detection",
+        skeleton_path: "exercises/graphs/src/cycle_detection.rs",
+        fixture: &[1, 2, 2, 3, 3, 1],
+        concept_note: "Two different algorithms sharing one file: undirected cycle detection \
+            has to ignore the edge you just walked IN on (the immediate parent) or every \
+            single edge would look like a cycle — a directed graph doesn't have this problem, \
+            since edges only go one way, so it tracks the CURRENT recursion stack instead. \
+            Notice there's no depth counter here — trace position is visit order, same as \
+            bfs/dfs, which is also what lets found() point back at exactly where the closing \
+            node already sits in the trace.",
+        hints: &[
+            "Undirected: thread an Option<i32> parent through the recursion (None at the \
+             very start) — not a magic sentinel value, since a real vertex could collide \
+             with one. A cycle is an already-visited neighbor that ISN'T Some(that parent).",
+            "Directed: track which nodes are on the CURRENT call stack (a HashSet you add to \
+             on entry, remove from before returning) separately from which nodes have EVER \
+             been visited — a cycle is a neighbor that's on the stack right now, not just \
+             visited at some point in the past.",
+            "Both: mark_inserted(*position, node) the first time you visit a node (then \
+             increment position — never reset it, even across disconnected components), and \
+             found(original_position) using the position you stored for whichever node closes \
+             the cycle.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "connected_components",
+        test_filter: "connected_components::tests::",
+        trace_key: "connected_components",
+        skeleton_path: "exercises/graphs/src/connected_components.rs",
+        fixture: &[1, 2, 3, 4, 4, 5],
+        concept_note: "One running position counter across the WHOLE call, not reset for \
+            each new group — an earlier draft of this exercise reset it per component, which \
+            looked fine on paper but would have made every later group's animation shove \
+            every earlier group sideways, since inserting into the trace's display array is a \
+            real shift, not an overwrite. Component grouping still exists correctly in the \
+            returned Vec<Vec<i32>> and in the tests; it just isn't drawn as separate visual \
+            groups.",
+        hints: &[
+            "Loop over every vertex; whichever ones you haven't visited yet each start a \
+             fresh DFS that collects everything reachable into its own Vec<i32>.",
+            "Write your own private DFS helper here rather than calling dfs() from dfs.rs — \
+             this exercise's tests shouldn't depend on that one being solved.",
+            "Thread ONE &mut usize position counter through every DFS call this function \
+             makes, not a fresh counter per component — mark_inserted(*position, node) then \
+             increment it, exactly once per vertex, for the whole call.",
+        ],
+        target: None,
         starts_empty: true,
     },
 ];

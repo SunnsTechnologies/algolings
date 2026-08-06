@@ -111,6 +111,15 @@ cargo run -- --plain
 | 7 | Red-black tree — insert | A left-leaning red-black tree (LLRB): three ordered checks (right-leaning red, two left reds, a 4-node split) replace AVL's four |
 | 8 | Red-black tree — delete | Borrowing a red link before descending into a black node, so deletion never breaks the tree's black-height invariant |
 
+**Graphs** — unweighted graph traversal fundamentals (weighted-graph algorithms like Dijkstra are a future module):
+
+| # | Exercise | Idiom you'll hit |
+|---|----------|-------------------|
+| 1 | Breadth-first search | A HashSet for visited, a VecDeque as the frontier — the same append-tracing idiom tree_traversals used, now walking a queue instead of a tree |
+| 2 | Depth-first search | Same fixture and idiom as BFS, but committing to one branch all the way down before trying the next — same graph, genuinely different visit order |
+| 3 | Cycle detection | Undirected tracks the immediate parent (Option, never a magic sentinel) so the edge you just walked in on doesn't look like a cycle; directed tracks the current recursion stack instead, since edges only go one way |
+| 4 | Connected components | One running position counter across the whole call, never reset per group — resetting would make each new component's animation shove every earlier one sideways, since a trace insert is a real shift, not an overwrite |
+
 Each exercise's full write-up (complexity analysis, walkthrough, alternative implementations) is also available at [learn.sunnstech.com](https://learn.sunnstech.com) if you want the deeper version.
 
 ## While you're solving an exercise
@@ -132,12 +141,12 @@ Compared elements are marked with both color *and* a `*` glyph — never color a
 
 ## How it works
 
-algolings is organized into modules (sorting, searching, linked lists, stacks & queues, hash tables, recursion & backtracking, trees, ...), each a pair of crates:
+algolings is organized into modules (sorting, searching, linked lists, stacks & queues, hash tables, recursion & backtracking, trees, graphs, ...), each a pair of crates:
 
 - **`algolings-trace`** — the tracing primitives (`cmp_lt`, `cmp_lt_values`, `swap`, `set_at`, `mark_sorted`, `probe`, `found`, `narrow_range`, `mark_inserted`, `mark_removed`, `mark_visited`, `mark_converging`, `mark_set`). Exercise solutions call these instead of raw `<` / `.swap()` / `==` — same behavior, but it lets algolings record what *your* solution actually did.
 - **`algolings-cli`** — the `algolings` binary: watches the current module's exercise files, runs their tests, renders the trace, and moves on to the next module once one's fully solved.
-- **`exercises/sort`**, **`exercises/search`**, **`exercises/linked-list`**, **`exercises/stacks-queues`**, **`exercises/hash-tables`**, **`exercises/recursion-backtracking`**, **`exercises/trees`** — the exercises you edit. Each one ships broken (`todo!()`).
-- **`exercises/sort-solutions`**, **`exercises/search-solutions`**, **`exercises/linked-list-solutions`**, **`exercises/stacks-queues-solutions`**, **`exercises/hash-tables-solutions`**, **`exercises/recursion-backtracking-solutions`**, **`exercises/trees-solutions`** — reference solutions, used by CI to prove every exercise is solvable, and as the source for hints and concept notes.
+- **`exercises/sort`**, **`exercises/search`**, **`exercises/linked-list`**, **`exercises/stacks-queues`**, **`exercises/hash-tables`**, **`exercises/recursion-backtracking`**, **`exercises/trees`**, **`exercises/graphs`** — the exercises you edit. Each one ships broken (`todo!()`).
+- **`exercises/sort-solutions`**, **`exercises/search-solutions`**, **`exercises/linked-list-solutions`**, **`exercises/stacks-queues-solutions`**, **`exercises/hash-tables-solutions`**, **`exercises/recursion-backtracking-solutions`**, **`exercises/trees-solutions`**, **`exercises/graphs-solutions`** — reference solutions, used by CI to prove every exercise is solvable, and as the source for hints and concept notes.
 
 When you save a file, algolings runs `cargo test` against it. If it passes, algolings runs a *separate* subprocess (`cargo run --bin <package>-trace`) with tracing enabled against your now-correct solution, and animates the result. Running the trace as its own subprocess — rather than linking your code into the long-running watch process — means it always reflects what you just saved, and a genuinely broken infinite loop can be killed outright instead of hanging the tool.
 
@@ -148,6 +157,8 @@ The hash-table module's trace is a real simplification, not just a different ski
 The recursion & backtracking module's trace doesn't show a data structure at all — `recursion_basics`/`tail_recursion` trace the CALL STACK itself (one frame per recursion depth), and `subsets`/`combinations`/`permutations`/`permutations_with_duplicates`/`n_queens` all reuse the same `Insert`/`Remove`/`Found` events for backtracking's push-candidate/recurse/pop-to-undo idiom — no new trace infrastructure was needed for this whole module.
 
 The trees module reuses more than it invents. `binary_search_tree`/`bst_deletion` extend recursion_basics's call-stack idiom to a tree descent (depth stands in for position); `tree_traversals` reuses linked-list Insert's append-tracing idiom; `heap` reuses sorting's `cmp_lt`/`swap` completely unchanged, since a heap really is just a flat `Vec` under the hood. The two self-balancing exercise pairs (AVL and red-black) ship with no animated trace at all — a rotation or color flip restructures several nodes' pointers (and, for red-black, colors) simultaneously, which no existing trace event can represent faithfully. Their rotation/color-flip mechanics are given to you fully implemented; the lesson in each is the case-decision logic that decides when to call them.
+
+The graphs module traces every exercise as visit order, not tree depth or array index — `bfs`/`dfs` reuse tree_traversals' append idiom directly (`mark_inserted(order.len(), node)`), and `cycle_detection`/`connected_components` use one running position counter across the WHOLE call rather than resetting per component or per branch, since a trace `Insert` is a real array shift, not an overwrite — resetting would visibly scramble the animation on every run with more than one component.
 
 ## Project layout
 
@@ -168,12 +179,14 @@ exercises/recursion-backtracking/            recursion & backtracking exercises 
 exercises/recursion-backtracking-solutions/  recursion & backtracking reference solutions (used by CI + hints)
 exercises/trees/                   trees exercises you edit (start broken)
 exercises/trees-solutions/         trees reference solutions (used by CI + hints)
+exercises/graphs/                  graphs exercises you edit (start broken)
+exercises/graphs-solutions/        graphs reference solutions (used by CI + hints)
 exercises/tests-shared/            one test suite per exercise, shared by both crates in its module
 ```
 
 ## Contributing
 
-Found a bug, or want to help finish the linked-list module (Floyd's cycle detection) or port the next one (graphs, dynamic programming)? Issues and PRs welcome.
+Found a bug, or want to help finish the linked-list module (Floyd's cycle detection), the graphs module (weighted-graph algorithms — Dijkstra, Bellman-Ford, MST, ...), or port the next one (dynamic programming)? Issues and PRs welcome.
 
 To verify the whole repo (not just the exercises you're working on), use:
 
