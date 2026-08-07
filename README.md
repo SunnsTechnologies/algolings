@@ -69,6 +69,7 @@ cargo run -- --plain
 | 6 | Doubly-linked pop | `prev` turns "find the node before the tail" from an O(n) walk into an O(1) upgrade |
 | 7 | Doubly-linked contains | Same forward-only search as Traverse, but walking `Rc<RefCell<Node>>` by cloning and borrowing instead of `.as_deref()` |
 | 8 | Converging search | Searching from both ends at once — the one thing a singly-linked list structurally can't do |
+| 9 | Floyd's cycle detection | `Box` can't represent a real cycle at all (exclusive ownership forbids it) — reuses the doubly-linked list's `Rc<RefCell<Node>>` instead, comparing pointer identity, never values |
 
 **Stacks & queues** — same value sequences, but access is restricted to one or both ends on purpose:
 
@@ -166,7 +167,7 @@ algolings is organized into modules (sorting, searching, linked lists, stacks & 
 
 When you save a file, algolings runs `cargo test` against it. If it passes, algolings runs a *separate* subprocess (`cargo run --bin <package>-trace`) with tracing enabled against your now-correct solution, and animates the result. Running the trace as its own subprocess — rather than linking your code into the long-running watch process — means it always reflects what you just saved, and a genuinely broken infinite loop can be killed outright instead of hanging the tool.
 
-The linked-list module's trace still uses the same array-style animation as sorting/searching: a list's values, in the order you'd walk them, shown as a growable/shrinkable row rather than literal boxes and arrows. It doesn't show pointer structure directly — the Rust code and concept notes carry that idiom instead.
+The linked-list module's trace still uses the same array-style animation as sorting/searching: a list's values, in the order you'd walk them, shown as a growable/shrinkable row rather than literal boxes and arrows. It doesn't show pointer structure directly — the Rust code and concept notes carry that idiom instead. `floyds_cycle_detection` is the one exception, and reuses `mark_set` on two STABLE positions instead: position 0 always shows the slow pointer's current value, position 1 the fast pointer's — both land on the same value the instant a cycle closes, since a list with a real cycle has no defined "end" for the array-growing idiom to build toward.
 
 The hash-table module's trace is a real simplification, not just a different skin on the same idea: `custom_hash_table`'s row shows one value per BUCKET (via `mark_set`), so it can demonstrate hash-based placement but not two colliding keys coexisting in the same bucket — the tests verify chaining survives collisions regardless of what the trace can draw. `hash_entry` has no trace at all, the first exercise without one: std `HashMap` has no stable index or iteration order for a replay to point at.
 
@@ -206,7 +207,7 @@ exercises/tests-shared/            one test suite per exercise, shared by both c
 
 ## Contributing
 
-The full curriculum from the design doc (sorting → searching → linked lists → stacks & queues → hash tables → recursion & backtracking → trees → graphs → dynamic programming) now has at least one exercise per module, and the graphs and trees modules cover their entire tutorial chapters. Found a bug, or want to help finish the linked-list module (Floyd's cycle detection) or the trees module's one remaining gap (the generic, unordered binary-tree structure)? Issues and PRs welcome.
+The full curriculum from the design doc (sorting → searching → linked lists → stacks & queues → hash tables → recursion & backtracking → trees → graphs → dynamic programming) now has at least one exercise per module, and the linked-list, graphs, and trees modules cover their entire tutorial chapters. Found a bug, or want to help finish the trees module's one remaining gap (the generic, unordered binary-tree structure)? Issues and PRs welcome.
 
 To verify the whole repo (not just the exercises you're working on), use:
 

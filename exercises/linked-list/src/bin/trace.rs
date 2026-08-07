@@ -6,7 +6,9 @@
 //! built via `from_values` BEFORE tracing is enabled — so constructing the
 //! starting state never shows up in the trace, only the traced operation
 //! itself does. `insert` starts from an empty list instead, since its
-//! events ARE the construction.
+//! events ARE the construction. `floyds_cycle_detection` builds via
+//! `from_values_with_cycle` instead of `from_values`, since it needs a
+//! genuine `Rc`-based cycle that `Box` can't represent at all.
 //!
 //! Run as a fresh subprocess (`cargo run -p exercises-linked-list --bin
 //! exercises-linked-list-trace -- <name> <fixture-json> [target]`) so it
@@ -75,6 +77,16 @@ fn main() {
             let list = DoublyLinkedList::from_values(&fixture);
             enable();
             list.contains_converging(target);
+        }
+        "floyds_cycle_detection" => {
+            // target here is the cycle-back INDEX, not a search value, and
+            // is optional — unlike every other arg in this dispatcher,
+            // `None` is a real, meaningful choice (an acyclic demo), not
+            // a missing-input error.
+            let cycle_to_index = args.next().and_then(|s| s.parse::<usize>().ok());
+            let list = DoublyLinkedList::from_values_with_cycle(&fixture, cycle_to_index);
+            enable();
+            list.has_cycle();
         }
         other => {
             eprintln!("unknown exercise: {other}");

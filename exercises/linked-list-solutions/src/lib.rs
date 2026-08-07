@@ -8,6 +8,7 @@ mod doubly_push;
 mod doubly_pop;
 mod doubly_contains;
 mod doubly_converge;
+mod floyds_cycle_detection;
 
 // Both modules define their own `Node` — re-exporting both under the bare
 // name would collide, so each gets a qualified alias.

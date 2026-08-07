@@ -73,8 +73,53 @@ impl DoublyLinkedList {
         }
     }
 
+    /// Builds a list from `values`, then — if `cycle_to_index` is `Some` —
+    /// makes the LAST node's `next` point back to the node at that index
+    /// instead of terminating at `None`, deliberately constructing a
+    /// genuine cycle. Only `floyds_cycle_detection` uses this: `Box`
+    /// (this project's plain singly-linked list) can't represent a real
+    /// cycle at all — exclusive ownership forbids a node having two
+    /// owners or pointing back to an ancestor — but `Rc`'s shared
+    /// ownership can. `cycle_to_index` must be `< values.len()`; this
+    /// panics on an out-of-bounds index the same way `Vec` indexing
+    /// would, since it's only ever called with hardcoded literals from
+    /// this exercise's own tests, never learner-facing input.
+    pub fn from_values_with_cycle(values: &[i32], cycle_to_index: Option<usize>) -> Self {
+        if values.is_empty() {
+            return Self::new();
+        }
+
+        let nodes: Vec<Rc<RefCell<Node>>> = values
+            .iter()
+            .map(|&value| {
+                Rc::new(RefCell::new(Node {
+                    value,
+                    prev: None,
+                    next: None,
+                }))
+            })
+            .collect();
+
+        for i in 0..nodes.len() - 1 {
+            nodes[i].borrow_mut().next = Some(nodes[i + 1].clone());
+            nodes[i + 1].borrow_mut().prev = Some(Rc::downgrade(&nodes[i]));
+        }
+
+        if let Some(index) = cycle_to_index {
+            nodes.last().unwrap().borrow_mut().next = Some(nodes[index].clone());
+        }
+
+        Self {
+            head: nodes.first().cloned(),
+            tail: nodes.last().cloned(),
+            len: values.len(),
+        }
+    }
+
     /// Reads the list's contents head-to-tail via `next`, without going
-    /// through a learner's own traversal code.
+    /// through a learner's own traversal code. NEVER call this on a list
+    /// built with a real cycle (`from_values_with_cycle(_, Some(_))`) —
+    /// it walks until `next` is `None`, which a cyclic list never reaches.
     pub fn to_vec(&self) -> Vec<i32> {
         let mut values = Vec::new();
         let mut current = self.head.clone();

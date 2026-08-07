@@ -65,6 +65,12 @@ fn main() {
             enable();
             list.contains_converging(target);
         }
+        "floyds_cycle_detection" => {
+            let cycle_to_index = args.next().and_then(|s| s.parse::<usize>().ok());
+            let list = DoublyLinkedList::from_values_with_cycle(&fixture, cycle_to_index);
+            enable();
+            list.has_cycle();
+        }
         other => {
             eprintln!("unknown exercise: {other}");
             std::process::exit(2);

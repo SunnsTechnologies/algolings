@@ -533,6 +533,33 @@ pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
         target: Some(30),
         starts_empty: false,
     },
+    Exercise {
+        name: "floyds_cycle_detection",
+        test_filter: "floyds_cycle_detection::tests::",
+        trace_key: "floyds_cycle_detection",
+        skeleton_path: "exercises/linked-list/src/floyds_cycle_detection.rs",
+        fixture: &[1, 2, 3, 4],
+        concept_note: "The tutorial's own example for this is actually broken — it tries to \
+            build a cycle out of Box<Node>, which is impossible (exclusive ownership forbids a \
+            node having two owners or pointing back to an ancestor), so its \"cycle\" is really \
+            just a second node with a coincidentally-matching value. This exercise reuses the \
+            doubly-linked list's Rc<RefCell<Node>>, which CAN form a genuine cycle, ignoring its \
+            unused prev/Weak field. Two STABLE display positions — slow's value, fast's value — \
+            get Set on every real step; watch both land on the same value the instant the cycle \
+            closes.",
+        hints: &[
+            "Track two pointers, both starting at the head. Each loop iteration: move slow \
+             one step via next, then move fast two steps via next — if fast (or fast's next) \
+             hits None first, there's no cycle.",
+            "Compare nodes with Rc::ptr_eq, never by value — two different nodes can hold the \
+             same i32 by coincidence, and that must never look like a cycle.",
+            "Call mark_set(0, slow_value) and mark_set(1, fast_value) every time each pointer \
+             actually lands on a real node — skip the call when a pointer becomes None, since \
+             there's nothing to display.",
+        ],
+        target: Some(1),
+        starts_empty: false,
+    },
 ];
 
 pub const STACKS_QUEUES_EXERCISES: &[Exercise] = &[
