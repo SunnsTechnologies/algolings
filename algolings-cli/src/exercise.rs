@@ -142,8 +142,9 @@ pub const SORT_EXERCISES: &[Exercise] = &[
         hints: &[
             "Compare each pair of adjacent elements — if they're out of order, swap them.",
             "Loop over the array repeatedly. A full pass with no swaps means you're done.",
-            "Use `cmp_lt(arr, i, i - 1)` to check order, `swap(arr, i - 1, i)` to fix it, \
-             and `mark_sorted(n)` once a pass makes no swaps.",
+            "Use `cmp_lt(arr, i, i - 1)` to check order and `swap(arr, i - 1, i)` to fix \
+             it. After each pass, shrink `n` by one and call `mark_sorted(n)` — do this \
+             every pass, not just the last one — then stop once a pass makes no swaps.",
         ],
         target: None,
         starts_empty: false,
@@ -380,10 +381,9 @@ pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
              index as you go.",
             "Use `current.take()` to move a node out of the list temporarily, so \
              you can either keep it or splice around it.",
-            "If the value matches, replace `*current` with `boxed_node.next.take()` \
-             and call `mark_removed(i)`; otherwise put `boxed_node` back with \
-             `*current = Some(boxed_node)` and advance to \
-             `&mut current.as_mut().unwrap().next`.",
+            "On a match, call `mark_removed(i)`, then splice the node out by pointing \
+             `*current` at whatever came after it. On a mismatch, put the node back \
+             where it was and step `current` one level deeper so the walk can continue.",
         ],
         target: Some(20),
         starts_empty: false,
@@ -425,8 +425,11 @@ pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
             "Track three things as you walk: the node before (`prev`, starts \
              `None`), the current node, and the node after it (saved before you \
              touch anything).",
-            "Use `current.take()` to move a node out, then point its `next` at \
-             `prev` before advancing both.",
+            "`current` is already owned outright here, so `while let Some(mut node) = \
+             current` moves it directly — no `.take()` needed on it (that trick is for \
+             when you're holding a `&mut Option<...>` field reference, not a plain owned \
+             local). Save the node's ORIGINAL `next` with `node.next.take()` before you \
+             overwrite it, or the rest of the list is lost.",
             "Call `mark_removed(0)` and `mark_inserted(remaining_len, value)` for \
              each node — `remaining_len` is how many nodes are still unprocessed \
              after this one leaves.",
@@ -447,9 +450,11 @@ pub const LINKED_LIST_EXERCISES: &[Exercise] = &[
             (`prev`, via `Weak`) actually buy you — O(1) removal from a known \
             node, walking backward — is what a later exercise puts to use.",
         hints: &[
-            "push_front and push_back both need to wire `prev` too, not just \
-             `next` — use `Rc::downgrade(&new_node)` to make a `Weak` reference, \
-             never a strong `Rc`, or you'll create a reference cycle.",
+            "push_front and push_back both need to wire `prev` too, not just `next` — \
+             always via `Rc::downgrade`, never a strong `Rc`, or you'll create a \
+             reference cycle. The direction flips: push_front downgrades the NEW node to \
+             set the old head's `prev`; push_back downgrades the OLD tail to set the new \
+             node's own `prev`.",
             "The list keeps a `tail` pointer specifically so push_back never has \
              to walk to find the end — update it directly instead of searching.",
             "Call `mark_inserted(0, value)` for push_front, or \
@@ -704,8 +709,8 @@ pub const HASH_TABLES_EXERCISES: &[Exercise] = &[
             "For each value, call `counts.entry(value).or_insert(0)` — this returns a \
              `&mut usize`, a fresh 0 if the key wasn't there yet, or the existing count \
              if it was.",
-            "Dereference and add 1 to whatever `entry(...).or_insert(0)` returns: \
-             `*counts.entry(value).or_insert(0) += 1;`",
+            "You need to dereference the `&mut usize` that `or_insert` gave you and bump \
+             it by one — pair a dereference (`*`) with `+= 1` on the entry's return value.",
         ],
         target: None,
         starts_empty: true,
@@ -839,10 +844,11 @@ pub const RECURSION_BACKTRACKING_EXERCISES: &[Exercise] = &[
              adjacent.",
             "Same used[]/length-gate structure as permutations, plus one more skip \
              condition in the loop.",
-            "Skip index i if `nums[i] == nums[i - 1] && !used[i - 1]` — that means the \
-             earlier identical value hasn't been placed yet in THIS branch, so placing \
-             the later one first would just re-derive an ordering another branch already \
-             covers.",
+            "Skip index i if `i > 0 && nums[i] == nums[i - 1] && !used[i - 1]` — the \
+             `i > 0` guard matters, since `nums[i - 1]` underflows a `usize` at i == 0. \
+             The rest means the earlier identical value hasn't been placed yet in THIS \
+             branch, so placing the later one first would just re-derive an ordering \
+             another branch already covers.",
         ],
         target: None,
         starts_empty: true,
@@ -1084,9 +1090,12 @@ pub const TREES_EXERCISES: &[Exercise] = &[
              tree_contains) — move_red_left/move_red_right assume the search path they're \
              on actually continues, and will panic on a value that was never there.",
             "Descending left: if the left child and ITS left child are both black, call \
-             move_red_left before recursing left. Descending right (or when the target \
-             equals the current node and needs its right subtree): the mirror image with \
-             move_red_right.",
+             move_red_left before recursing left. Descending right, or when the target \
+             equals the current node: it's NOT a clean mirror — first rotate_right if the \
+             current node's own left child is red (un-leaning it so you can look right \
+             safely), then check whether the target is a leaf with no right child \
+             (return None if so), and only then call move_red_right if the right child \
+             and ITS left child are both black.",
             "Prime the root to Red before the very first recursive call if both its \
              children are black, and force it back to Black afterward — otherwise the \
              very first move_red_left/move_red_right has no red link to borrow from. Call \
@@ -1474,8 +1483,10 @@ pub const DYNAMIC_PROGRAMMING_EXERCISES: &[Exercise] = &[
             houses back (never one, since adjacent houses can't both be hit). Same mark_set \
             idiom as climbing_stairs either way.",
         hints: &[
-            "dp[i] is the most you can rob from houses 0..=i. Base cases: dp[0] = nums[0], \
-             dp[1] = nums[0].max(nums[1]) — you can only take one of the first two.",
+            "Handle short input first: an empty slice has nothing to rob (return 0), and \
+             a single house means take it (return nums[0]) — reading nums[1] before \
+             checking this panics. From there, dp[i] is the most you can rob from houses \
+             0..=i, with base cases dp[0] = nums[0] and dp[1] = nums[0].max(nums[1]).",
             "At each house after that, you're choosing between two options: don't rob it \
              (dp[i-1]) or rob it (dp[i-2] + nums[i]) — take whichever is bigger.",
             "Call mark_set(i, dp[i]) every time you fill a position, including dp[0] and \
