@@ -20,7 +20,7 @@
 //! reflects the CURRENT on-disk solution code.
 
 use algolings_trace::{enable, take_events};
-use exercises_trees::{inorder, AvlTree, Bst, MinHeap, RbTree};
+use exercises_trees::{inorder, AvlTree, BinaryTree, Bst, MinHeap, RbTree};
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -53,6 +53,13 @@ fn main() {
             enable();
             let mut result = Vec::new();
             inorder(&tree.root, &mut result);
+        }
+        "binary_tree_insert" => {
+            let mut tree = BinaryTree::new();
+            enable();
+            for value in fixture {
+                tree.insert(value);
+            }
         }
         "heap" => {
             let (initial, pushed) = fixture.split_at(fixture.len().saturating_sub(1));

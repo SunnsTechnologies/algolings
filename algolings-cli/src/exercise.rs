@@ -874,6 +874,29 @@ pub const RECURSION_BACKTRACKING_EXERCISES: &[Exercise] = &[
 
 pub const TREES_EXERCISES: &[Exercise] = &[
     Exercise {
+        name: "binary_tree_insert",
+        test_filter: "binary_tree_insert::tests::",
+        trace_key: "binary_tree_insert",
+        skeleton_path: "exercises/trees/src/binary_tree_insert.rs",
+        fixture: &[1, 2, 3, 4, 5],
+        concept_note: "A plain binary tree has no ordering rule, so there's nothing to \
+            compare a value against — insert always goes to the first empty slot found by \
+            breadth-first search. The trace position is the LEVEL-ORDER SLOT INDEX (root = \
+            0, children of index i are 2i+1/2i+2), the same arithmetic heap.rs uses for its \
+            flat Vec, just computed by walking Box pointers with a queue instead.",
+        hints: &[
+            "Use a VecDeque of (node, index) pairs, starting with (root, 0) — this is a \
+             breadth-first search, not a recursive descent like binary_search_tree's insert.",
+            "Call mark_visited(index) every time you dequeue an occupied node, before \
+             checking its children.",
+            "A node at index i has children at 2i+1 (left) and 2i+2 (right). If a child \
+             slot is empty, place the new node there and call mark_inserted(child_index, \
+             value); otherwise enqueue that child and keep going.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
         name: "binary_search_tree",
         test_filter: "binary_search_tree::tests::",
         trace_key: "binary_search_tree",

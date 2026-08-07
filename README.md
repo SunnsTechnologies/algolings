@@ -99,18 +99,19 @@ cargo run -- --plain
 | 6 | Permutations with duplicates | Sort first, then skip a duplicate unless its earlier twin is already placed |
 | 7 | N-Queens | `positions: Vec<usize>` instead of a 2D board — same push/recurse/pop idiom as every other backtracking exercise here |
 
-**Trees** — the largest module yet, from a plain BST up through both major kinds of self-balancing tree:
+**Trees** — the full chapter, from a plain unordered binary tree up through both major kinds of self-balancing tree:
 
 | # | Exercise | Idiom you'll hit |
 |---|----------|-------------------|
-| 1 | Binary search tree | Depth-as-position, the same call-stack idiom recursion_basics used, now walking a tree instead of a flat call stack |
-| 2 | BST deletion | Deleting a two-children node without losing track of an unrelated sibling at the same depth |
-| 3 | Tree traversals | Same append-tracing idiom as linked-list Insert — inorder/preorder/postorder/level_order differ only in WHERE the visit happens |
-| 4 | Heap (min-heap) | A "tree" that's really just a flat `Vec` and index arithmetic — reuses sorting's `cmp_lt`/`swap` unchanged |
-| 5 | Self-balancing BST (AVL) — insert | Height tracking and the four rotation cases (LL/RR/LR/RL); ships without an animated trace, since a rotation restructures multiple nodes at once |
-| 6 | Self-balancing BST (AVL) — delete | The same four cases, but genuinely different trigger conditions than insertion's |
-| 7 | Red-black tree — insert | A left-leaning red-black tree (LLRB): three ordered checks (right-leaning red, two left reds, a 4-node split) replace AVL's four |
-| 8 | Red-black tree — delete | Borrowing a red link before descending into a black node, so deletion never breaks the tree's black-height invariant |
+| 1 | Binary tree — insert | No ordering rule to compare against, so insert is breadth-first: the trace position is a level-order slot index (root = 0, children of `i` are `2i+1`/`2i+2`), the same arithmetic the heap exercise uses, just walked via Box pointers instead of a flat Vec |
+| 2 | Binary search tree | Depth-as-position, the same call-stack idiom recursion_basics used, now walking a tree instead of a flat call stack |
+| 3 | BST deletion | Deleting a two-children node without losing track of an unrelated sibling at the same depth |
+| 4 | Tree traversals | Same append-tracing idiom as linked-list Insert — inorder/preorder/postorder/level_order differ only in WHERE the visit happens |
+| 5 | Heap (min-heap) | A "tree" that's really just a flat `Vec` and index arithmetic — reuses sorting's `cmp_lt`/`swap` unchanged |
+| 6 | Self-balancing BST (AVL) — insert | Height tracking and the four rotation cases (LL/RR/LR/RL); ships without an animated trace, since a rotation restructures multiple nodes at once |
+| 7 | Self-balancing BST (AVL) — delete | The same four cases, but genuinely different trigger conditions than insertion's |
+| 8 | Red-black tree — insert | A left-leaning red-black tree (LLRB): three ordered checks (right-leaning red, two left reds, a 4-node split) replace AVL's four |
+| 9 | Red-black tree — delete | Borrowing a red link before descending into a black node, so deletion never breaks the tree's black-height invariant |
 
 **Graphs** — the full chapter: unweighted traversal, weighted shortest paths, spanning trees, ordering, and connectivity:
 
@@ -173,7 +174,7 @@ The hash-table module's trace is a real simplification, not just a different ski
 
 The recursion & backtracking module's trace doesn't show a data structure at all — `recursion_basics`/`tail_recursion` trace the CALL STACK itself (one frame per recursion depth), and `subsets`/`combinations`/`permutations`/`permutations_with_duplicates`/`n_queens` all reuse the same `Insert`/`Remove`/`Found` events for backtracking's push-candidate/recurse/pop-to-undo idiom — no new trace infrastructure was needed for this whole module.
 
-The trees module reuses more than it invents. `binary_search_tree`/`bst_deletion` extend recursion_basics's call-stack idiom to a tree descent (depth stands in for position); `tree_traversals` reuses linked-list Insert's append-tracing idiom; `heap` reuses sorting's `cmp_lt`/`swap` completely unchanged, since a heap really is just a flat `Vec` under the hood. The two self-balancing exercise pairs (AVL and red-black) ship with no animated trace at all — a rotation or color flip restructures several nodes' pointers (and, for red-black, colors) simultaneously, which no existing trace event can represent faithfully. Their rotation/color-flip mechanics are given to you fully implemented; the lesson in each is the case-decision logic that decides when to call them.
+The trees module reuses more than it invents. `binary_tree_insert` traces a level-order SLOT INDEX instead of depth — a plain binary tree has no ordering rule to descend by comparison, so insert is breadth-first (a queue of `(node, index)` pairs), and a node at index `i` has children at `2i+1`/`2i+2`, the same arithmetic `heap` uses for its flat Vec, just walked via Box pointers instead of indexing an array directly. `binary_search_tree`/`bst_deletion` extend recursion_basics's call-stack idiom to a tree descent (depth stands in for position, safe there specifically because a single insert/contains call only ever walks one root-to-leaf path); `tree_traversals` reuses linked-list Insert's append-tracing idiom; `heap` reuses sorting's `cmp_lt`/`swap` completely unchanged, since a heap really is just a flat `Vec` under the hood. The two self-balancing exercise pairs (AVL and red-black) ship with no animated trace at all — a rotation or color flip restructures several nodes' pointers (and, for red-black, colors) simultaneously, which no existing trace event can represent faithfully. Their rotation/color-flip mechanics are given to you fully implemented; the lesson in each is the case-decision logic that decides when to call them.
 
 The graphs module traces most exercises as visit order, not tree depth or array index — `bfs`/`dfs` reuse tree_traversals' append idiom directly (`mark_inserted(order.len(), node)`), and `cycle_detection`/`connected_components`/`strongly_connected_components` use one running position counter across the WHOLE call rather than resetting per component or per branch, since a trace `Insert` is a real array shift, not an overwrite. `dijkstra`/`bellman_ford` instead assign every vertex a STABLE position once up front and `mark_set` it on every distance improvement — the same slot can update more than once over a single run, which is exactly how the trace shows a cheaper path being found. `mst_prim`/`mst_kruskal` ship with no animated trace at all: a minimum-spanning-tree edge is three values (from, to, weight), and the existing trace events only carry one.
 
@@ -207,7 +208,7 @@ exercises/tests-shared/            one test suite per exercise, shared by both c
 
 ## Contributing
 
-The full curriculum from the design doc (sorting → searching → linked lists → stacks & queues → hash tables → recursion & backtracking → trees → graphs → dynamic programming) now has at least one exercise per module, and the linked-list, graphs, and trees modules cover their entire tutorial chapters. Found a bug, or want to help finish the trees module's one remaining gap (the generic, unordered binary-tree structure)? Issues and PRs welcome.
+The full curriculum from the design doc (sorting → searching → linked lists → stacks & queues → hash tables → recursion & backtracking → trees → graphs → dynamic programming) now has at least one exercise per module, and the linked-list, graphs, and trees modules cover their entire tutorial chapters. Found a bug, or want to help elsewhere? Issues and PRs welcome.
 
 To verify the whole repo (not just the exercises you're working on), use:
 

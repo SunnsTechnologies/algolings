@@ -2,6 +2,8 @@ mod bst;
 mod binary_search_tree;
 mod bst_deletion;
 mod tree_traversals;
+mod binary_tree;
+mod binary_tree_insert;
 mod min_heap;
 mod heap;
 mod avl;
@@ -13,6 +15,7 @@ mod red_black_tree_delete;
 
 pub use bst::{Bst, Node};
 pub use tree_traversals::{inorder, level_order, postorder, preorder};
+pub use binary_tree::BinaryTree;
 pub use min_heap::MinHeap;
 pub use avl::AvlTree;
 pub use rb::RbTree;
@@ -31,6 +34,16 @@ mod sync_tests {
         assert_eq!(
             solutions, skeleton,
             "bst.rs has diverged between trees-solutions and trees"
+        );
+    }
+
+    #[test]
+    fn binary_tree_rs_matches_the_skeleton_crate() {
+        let solutions = include_str!("binary_tree.rs");
+        let skeleton = include_str!("../../trees/src/binary_tree.rs");
+        assert_eq!(
+            solutions, skeleton,
+            "binary_tree.rs has diverged between trees-solutions and trees"
         );
     }
 
