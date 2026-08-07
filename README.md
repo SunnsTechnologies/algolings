@@ -111,7 +111,7 @@ cargo run -- --plain
 | 7 | Red-black tree — insert | A left-leaning red-black tree (LLRB): three ordered checks (right-leaning red, two left reds, a 4-node split) replace AVL's four |
 | 8 | Red-black tree — delete | Borrowing a red link before descending into a black node, so deletion never breaks the tree's black-height invariant |
 
-**Graphs** — unweighted graph traversal fundamentals (weighted-graph algorithms like Dijkstra are a future module):
+**Graphs** — the full chapter: unweighted traversal, weighted shortest paths, spanning trees, ordering, and connectivity:
 
 | # | Exercise | Idiom you'll hit |
 |---|----------|-------------------|
@@ -119,6 +119,14 @@ cargo run -- --plain
 | 2 | Depth-first search | Same fixture and idiom as BFS, but committing to one branch all the way down before trying the next — same graph, genuinely different visit order |
 | 3 | Cycle detection | Undirected tracks the immediate parent (Option, never a magic sentinel) so the edge you just walked in on doesn't look like a cycle; directed tracks the current recursion stack instead, since edges only go one way |
 | 4 | Connected components | One running position counter across the whole call, never reset per group — resetting would make each new component's animation shove every earlier one sideways, since a trace insert is a real shift, not an overwrite |
+| 5 | Dijkstra | A stable per-node trace position, assigned once — watch a distance get set, then IMPROVED to a smaller value once a cheaper path is found |
+| 6 | Bellman-Ford | Same idiom as Dijkstra, but handles negative edge weights — if distances are still changing after exactly vertex-count-minus-one passes, that instability itself is the negative-cycle detector |
+| 7 | Floyd-Warshall | All-pairs, not single-source — a 2D table flattened row-major like grid_paths, except the same cell can improve more than once as each vertex is tried as a route-through point |
+| 8 | Minimum spanning tree — Prim's | Grows a tree outward from one vertex, a min-heap always picking the cheapest frontier edge; ships without an animated trace, since an MST edge is three values, not one |
+| 9 | Minimum spanning tree — Kruskal's | Sorts every edge cheapest-first, uses a given union-find structure to skip whichever ones would close a cycle |
+| 10 | Topological sort — DFS-based | Traces only the real returned order, not the raw finish-order push sequence (which runs backward relative to it) — one untraced bookkeeping pass, one traced pass |
+| 11 | Topological sort — Kahn's | Peels off vertices with no remaining dependencies one at a time; builds the real order directly, no reversal needed |
+| 12 | Strongly connected components | Kosaraju's two-pass algorithm — an untraced finish-order pass, then a traced pass over the reversed graph using connected_components' exact never-reset idiom |
 
 **Dynamic programming** — the final module: optimizing recursion by caching overlapping subproblems:
 
@@ -166,7 +174,7 @@ The recursion & backtracking module's trace doesn't show a data structure at all
 
 The trees module reuses more than it invents. `binary_search_tree`/`bst_deletion` extend recursion_basics's call-stack idiom to a tree descent (depth stands in for position); `tree_traversals` reuses linked-list Insert's append-tracing idiom; `heap` reuses sorting's `cmp_lt`/`swap` completely unchanged, since a heap really is just a flat `Vec` under the hood. The two self-balancing exercise pairs (AVL and red-black) ship with no animated trace at all — a rotation or color flip restructures several nodes' pointers (and, for red-black, colors) simultaneously, which no existing trace event can represent faithfully. Their rotation/color-flip mechanics are given to you fully implemented; the lesson in each is the case-decision logic that decides when to call them.
 
-The graphs module traces every exercise as visit order, not tree depth or array index — `bfs`/`dfs` reuse tree_traversals' append idiom directly (`mark_inserted(order.len(), node)`), and `cycle_detection`/`connected_components` use one running position counter across the WHOLE call rather than resetting per component or per branch, since a trace `Insert` is a real array shift, not an overwrite — resetting would visibly scramble the animation on every run with more than one component.
+The graphs module traces most exercises as visit order, not tree depth or array index — `bfs`/`dfs` reuse tree_traversals' append idiom directly (`mark_inserted(order.len(), node)`), and `cycle_detection`/`connected_components`/`strongly_connected_components` use one running position counter across the WHOLE call rather than resetting per component or per branch, since a trace `Insert` is a real array shift, not an overwrite. `dijkstra`/`bellman_ford` instead assign every vertex a STABLE position once up front and `mark_set` it on every distance improvement — the same slot can update more than once over a single run, which is exactly how the trace shows a cheaper path being found. `mst_prim`/`mst_kruskal` ship with no animated trace at all: a minimum-spanning-tree edge is three values (from, to, weight), and the existing trace events only carry one.
 
 The dynamic programming module reuses the `Set` idiom `counting_sort`/`radix_sort`/`custom_hash_table` already established — a fixed-size, zeroed starting picture, filled in as the DP table builds — rather than inventing anything new. `grid_paths` is the one exercise with a genuinely 2D table, flattened row-major into a single trace position; its first row and column (both DP base cases) have to be traced in a specific order (the full first row, then the first column starting one row down) or the shared corner cell gets marked twice.
 
@@ -198,7 +206,7 @@ exercises/tests-shared/            one test suite per exercise, shared by both c
 
 ## Contributing
 
-The full curriculum from the design doc (sorting → searching → linked lists → stacks & queues → hash tables → recursion & backtracking → trees → graphs → dynamic programming) now has at least one exercise per module. Found a bug, or want to help finish the linked-list module (Floyd's cycle detection) or the graphs module (weighted-graph algorithms — Dijkstra, Bellman-Ford, MST, topological sort, strongly connected components)? Issues and PRs welcome.
+The full curriculum from the design doc (sorting → searching → linked lists → stacks & queues → hash tables → recursion & backtracking → trees → graphs → dynamic programming) now has at least one exercise per module, and the graphs and trees modules cover their entire tutorial chapters. Found a bug, or want to help finish the linked-list module (Floyd's cycle detection) or the trees module's one remaining gap (the generic, unordered binary-tree structure)? Issues and PRs welcome.
 
 To verify the whole repo (not just the exercises you're working on), use:
 

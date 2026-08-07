@@ -5,11 +5,12 @@
 //! module wraps its tutorial data structure (`Bst`, `AvlTree`, `RbTree`),
 //! so `new`/`len`/`is_empty` stay consistent across the whole curriculum.
 //!
-//! One struct serves all four exercises — directed vs undirected is a
-//! choice of constructor (`from_directed_edges` inserts one direction per
-//! edge, `from_undirected_edges` inserts both), not a type-level
-//! distinction. Weighted graphs (Dijkstra, Bellman-Ford, MST, ...) are out
-//! of scope for this module entirely; there's no weighted variant here.
+//! One struct serves bfs/dfs/cycle_detection/connected_components/
+//! topological_sort_dfs/topological_sort_kahn/strongly_connected_components
+//! — directed vs undirected is a choice of constructor (`from_directed_edges`
+//! inserts one direction per edge, `from_undirected_edges` inserts both), not
+//! a type-level distinction. Weighted algorithms (Dijkstra, Bellman-Ford,
+//! MST, ...) use the separate `WeightedGraph` in `weighted_graph.rs` instead.
 //!
 //! Values are bare `i32` vertex IDs, matching every other exercise in this
 //! project.
@@ -69,4 +70,24 @@ impl Graph {
     pub fn is_empty(&self) -> bool {
         self.adjacency.is_empty()
     }
+}
+
+/// Flips every edge's direction — given scaffolding, used by
+/// `strongly_connected_components`'s Kosaraju's algorithm (the graded
+/// lesson is the two-DFS-pass orchestration, not this mechanical
+/// transformation). Every node in the original graph gets an entry in
+/// the reversed graph too, even ones with no incoming edges of their
+/// own — the same "sink stays visible" guarantee `from_directed_edges`
+/// already makes, kept here for consistency even though Kosaraju's own
+/// traversal doesn't strictly need it (`neighbors()` already degrades a
+/// missing key to an empty slice).
+pub fn reverse_graph(graph: &Graph) -> Graph {
+    let mut reversed = Graph::new();
+    for from in graph.nodes() {
+        reversed.adjacency.entry(from).or_default();
+        for &to in graph.neighbors(from) {
+            reversed.adjacency.entry(to).or_default().push(from);
+        }
+    }
+    reversed
 }

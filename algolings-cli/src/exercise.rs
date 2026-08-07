@@ -1153,6 +1153,233 @@ pub const GRAPHS_EXERCISES: &[Exercise] = &[
         target: None,
         starts_empty: true,
     },
+    Exercise {
+        name: "dijkstra",
+        test_filter: "dijkstra::tests::",
+        trace_key: "dijkstra",
+        skeleton_path: "exercises/graphs/src/dijkstra.rs",
+        // A zeroed display array, one slot per node — dijkstra uses
+        // mark_set on a STABLE per-node position (assigned once, sorted),
+        // not append-tracing, so this has to be a pre-populated picture
+        // rather than an empty one. The actual weighted demo graph is
+        // hardcoded in the trace dispatcher, same as hash-tables'
+        // custom_hash_table.
+        fixture: &[0, 0, 0, 0],
+        concept_note: "Trace position is a STABLE map assigned once up front (sorted node \
+            list, not visit order) — a node's distance can improve more than once over the \
+            call, and mark_set replaying at the same position twice is exactly how the trace \
+            shows that improvement. Watch position 2 in this demo: it gets set once, then \
+            improved to a smaller value once a cheaper path through another node is found.",
+        hints: &[
+            "Track every node's best known distance in a HashMap, starting all at i32::MAX \
+             except the start node (0). Use a BinaryHeap<Reverse<(dist, node)>> as the \
+             frontier — Reverse turns Rust's max-heap into a min-heap.",
+            "Pop the closest node; if its popped distance is worse than what's already \
+             recorded for it, skip it — it's a stale heap entry from before an improvement.",
+            "Relax every outgoing edge: if going through the popped node gives a shorter \
+             path to a neighbor, update its distance, call mark_set(position_of[neighbor], \
+             new_dist), and push it back onto the heap.",
+        ],
+        target: Some(1),
+        starts_empty: false,
+    },
+    Exercise {
+        name: "bellman_ford",
+        test_filter: "bellman_ford::tests::",
+        trace_key: "bellman_ford",
+        skeleton_path: "exercises/graphs/src/bellman_ford.rs",
+        fixture: &[0, 0, 0, 0],
+        concept_note: "Same stable-position mark_set idiom as dijkstra, but this algorithm \
+            works with NEGATIVE edge weights too, which break dijkstra's greedy assumption \
+            (that once you pop the closest node, you'll never find a cheaper way to it later). \
+            If a graph has a negative-weight cycle, distances never truly settle — watch for \
+            numbers still changing after exactly vertex-count-minus-one passes: that \
+            instability IS the negative-cycle detector, and the final Err means the numbers \
+            you just watched are not real answers.",
+        hints: &[
+            "Initialize every vertex's distance to i32::MAX except the source (0). Relax \
+             EVERY edge in the list, vertex-count-minus-one times over — that's enough passes \
+             to guarantee the true shortest distance has propagated everywhere, if no \
+             negative cycle exists.",
+            "An edge relaxes when distance[edge.from] + edge.weight is smaller than the \
+             current distance[edge.to] — update it and call mark_set(position_of[edge.to], \
+             new_dist). Skip edges where edge.from is still unreached (i32::MAX).",
+            "After the main passes, run ONE more relaxation check over every edge — if \
+             anything would still improve, a negative-weight cycle exists, so return Err \
+             instead of Ok.",
+        ],
+        target: Some(1),
+        starts_empty: false,
+    },
+    Exercise {
+        name: "floyd_warshall",
+        test_filter: "floyd_warshall::tests::",
+        trace_key: "floyd_warshall",
+        skeleton_path: "exercises/graphs/src/floyd_warshall.rs",
+        // The flattened starting distance matrix itself (row-major),
+        // INF sentinels included — this fixture drives both the display
+        // AND construction at once (1_073_741_823 == i32::MAX / 2, the
+        // exercise's own INF constant, spelled out since this file has
+        // no dependency on the exercises-graphs crate to reference it
+        // directly).
+        fixture: &[
+            0, 3, 1_073_741_823, 5, 1_073_741_823, 0, 2, 1_073_741_823, 8, 1_073_741_823, 0, 1,
+            1_073_741_823, 1_073_741_823, 1_073_741_823, 0,
+        ],
+        concept_note: "ALL-pairs shortest paths, not just single-source — this works on a \
+            dense matrix instead of an adjacency list, flattened row-major into one trace \
+            position (row * n + col) same as grid_paths, except the SAME cell can improve \
+            more than once as the algorithm tries routing through each vertex in turn, not \
+            just once. INF stands in for \"no direct edge\" — deliberately i32::MAX / 2, not \
+            i32::MAX itself, so INF + INF still fits in an i32 without overflowing.",
+        hints: &[
+            "Three nested loops: for every possible \"via\" vertex k, then every row i, then \
+             every column j — that's the entire algorithm, no separate graph traversal needed.",
+            "A cell improves when dist[i][k] + dist[k][j] (routing through k) is smaller than \
+             the current dist[i][j] — update it and call mark_set(i * n + j, dist[i][j]).",
+            "k must be the OUTERMOST loop, not innermost — routing through vertex k needs \
+             dist[i][k] and dist[k][j] to already reflect every vertex before k that's been \
+             tried as a via-point.",
+        ],
+        target: None,
+        starts_empty: false,
+    },
+    Exercise {
+        name: "mst_prim",
+        test_filter: "mst_prim::tests::",
+        trace_key: "mst_prim",
+        skeleton_path: "exercises/graphs/src/mst_prim.rs",
+        fixture: &[],
+        concept_note: "No animated trace — a minimum spanning tree is a growing list of \
+            (from, to, weight) triples, and the existing trace events only carry one i32 \
+            value each, with no truthful way to show which two vertices an edge connects. \
+            Prim's grows the tree outward from one starting vertex, always adding whichever \
+            frontier edge (one endpoint already in, one not) is cheapest — a min-heap makes \
+            finding that cheapest edge fast.",
+        hints: &[
+            "Track visited vertices and a min-heap of (weight, from, to) frontier edges. \
+             Start by marking the start vertex visited and pushing all its edges.",
+            "Pop the cheapest edge; if its `to` vertex is already visited, skip it (that edge \
+             would just reconnect something already in the tree, not extend it).",
+            "Otherwise: mark `to` visited, add the edge to the MST, then push every edge out \
+             of `to` whose other end isn't visited yet — those become the new frontier.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "mst_kruskal",
+        test_filter: "mst_kruskal::tests::",
+        trace_key: "mst_kruskal",
+        skeleton_path: "exercises/graphs/src/mst_kruskal.rs",
+        fixture: &[],
+        concept_note: "No animated trace, same reasoning as mst_prim. Kruskal's builds the \
+            same kind of tree from a completely different angle: sort every edge cheapest \
+            first, then just add each one unless it would connect two vertices already in the \
+            same component (which would close a cycle — a tree never has one). The given \
+            UnionFind answers \"already connected?\" in near-constant time.",
+        hints: &[
+            "Sort a copy of the edge list by weight, cheapest first — Kruskal's never looks \
+             at the graph structure directly, only this sorted list.",
+            "Build a UnionFind over every vertex, then walk the sorted edges in order.",
+            "For each edge, call UnionFind::union(edge.from, edge.to) — keep the edge only if \
+             union() returns true (it returns false when both endpoints were already in the \
+             same component, meaning this edge would form a cycle).",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "topological_sort_dfs",
+        // The module is named topological_sort_recursive.rs, not
+        // topological_sort_dfs.rs — "dfs::tests::" is a literal
+        // substring of "topological_sort_dfs::tests::", which would
+        // make cargo's test filter for the plain `dfs` exercise ALSO
+        // match this one's tests (and vice versa). The exercise's
+        // display name/trace_key stay "topological_sort_dfs" since
+        // those don't participate in substring matching against a real
+        // module path.
+        test_filter: "topological_sort_recursive::tests::",
+        trace_key: "topological_sort_dfs",
+        skeleton_path: "exercises/graphs/src/topological_sort_recursive.rs",
+        fixture: &[1, 2, 1, 3, 2, 4, 3, 4],
+        concept_note: "Order every vertex so each one comes before everything it points to. \
+            The DFS-based approach pushes a vertex onto a stack only once everything reachable \
+            from it is fully explored — that stack ends up in REVERSE topological order. The \
+            trace shows only the FINAL order (after reversing), not the raw finish-order push \
+            sequence — that finish-order pass happens first, untraced, exactly the way \
+            strongly_connected_components' first pass is also untraced bookkeeping.",
+        hints: &[
+            "Run DFS from every not-yet-visited vertex, pushing each one onto a stack the \
+             moment every neighbor below it is done — this finish-order pass is NOT traced.",
+            "Detect a cycle with a `visiting` set tracking the CURRENT recursion path \
+             (separate from `visited`, which tracks everything ever finished) — reaching a \
+             node that's still `visiting` means you've looped back on yourself; return None.",
+            "Once the finish-order stack is complete, reverse it, then walk the reversed \
+             stack building a FRESH `order` vec with mark_inserted(order.len(), node) — this \
+             second pass is what actually gets traced, so the animation matches the real \
+             return value.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "topological_sort_kahn",
+        test_filter: "topological_sort_kahn::tests::",
+        trace_key: "topological_sort_kahn",
+        skeleton_path: "exercises/graphs/src/topological_sort_kahn.rs",
+        fixture: &[1, 2, 1, 3, 2, 4, 3, 4],
+        concept_note: "Same fixture and same answer as topological_sort_dfs, from a completely \
+            different angle: repeatedly peel off any vertex with no remaining unprocessed \
+            dependencies (in-degree 0). Unlike the DFS-based version, `order` builds DIRECTLY \
+            in final order as vertices are processed — no reversal needed, so \
+            mark_inserted(order.len(), node) maps straight onto the real return value with no \
+            extra pass required.",
+        hints: &[
+            "Count every vertex's in-degree (how many edges point AT it) first. Seed a queue \
+             with whichever vertices start at in-degree 0 — sort them first, so the seeding \
+             order is deterministic rather than depending on HashMap iteration.",
+            "Pop a vertex, call mark_inserted(order.len(), node), then decrement the \
+             in-degree of each of its neighbors — any neighbor that drops to 0 becomes newly \
+             available and gets pushed onto the queue.",
+            "If fewer vertices get processed than exist in the graph, some are stuck waiting \
+             on each other forever — that's a cycle, so return None instead of Some(order).",
+        ],
+        target: None,
+        starts_empty: true,
+    },
+    Exercise {
+        name: "strongly_connected_components",
+        // The module is named kosaraju_scc.rs, not
+        // strongly_connected_components.rs — "connected_components::tests::"
+        // is a literal substring of
+        // "strongly_connected_components::tests::", the same collision
+        // class topological_sort_dfs hit against the plain dfs
+        // exercise. Display name/trace_key stay the descriptive form.
+        test_filter: "kosaraju_scc::tests::",
+        trace_key: "strongly_connected_components",
+        skeleton_path: "exercises/graphs/src/kosaraju_scc.rs",
+        fixture: &[1, 2, 2, 3, 3, 1, 3, 4, 4, 5],
+        concept_note: "Kosaraju's algorithm: two DFS passes find every maximal group of \
+            vertices that can all reach each other. Pass 1 builds a finish-order stack over \
+            the original graph — untraced bookkeeping, same status as topological_sort_dfs's \
+            first pass. Pass 2 walks the REVERSED graph, popping that stack, and is traced \
+            with connected_components' exact idiom: one running position counter across the \
+            WHOLE call, never reset per group.",
+        hints: &[
+            "Pass 1 (untraced): DFS from every unvisited vertex over the ORIGINAL graph, \
+             pushing each one onto a stack once everything reachable from it is fully \
+             explored — same finish-order idea as topological_sort_dfs's first pass.",
+            "Reverse the graph with the given reverse_graph() helper, then pop vertices off \
+             that finish-order stack one at a time.",
+            "For each not-yet-visited popped vertex, DFS over the REVERSED graph, collecting \
+             everything reachable into one component — mark_inserted(*position, node) on \
+             first visit, using ONE counter that runs for the whole call, never reset between \
+             components.",
+        ],
+        target: None,
+        starts_empty: true,
+    },
 ];
 
 pub const DYNAMIC_PROGRAMMING_EXERCISES: &[Exercise] = &[
